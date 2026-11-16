@@ -1,0 +1,68 @@
+# Builds the app and publishes a GitHub release for each tag pushed, such
+# as v0.2.0: the version (0.2.0) comes from the tag, not from mygo.json.
+#
+#   git tag v0.2.0 && git push origin v0.2.0
+#
+# macOS builds a universal .dmg, and cross-compiles the Windows apps, whose
+# installers NSIS makes. Neither is signed with a developer certificate.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    env:
+      GOTOOLCHAIN: auto
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: |
+          go vet ./...
+          GOOS=windows go vet ./...
+          go test ./...
+
+      - name: Set the version from the tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          jq --arg v "$version" '.version = $v' mygo.json > mygo.json.tmp
+          mv mygo.json.tmp mygo.json
+
+      - name: Install NSIS
+        run: brew install makensis
+
+      - name: Build
+        run: go tool mygo build -platform darwin/universal,windows/amd64,windows/arm64
+
+      - name: Package
+        run: |
+          mkdir dist
+          cp "build/darwin-universal/ternssh-$VERSION.dmg" "dist/ternssh-$VERSION-macos-universal.dmg"
+          for arch in amd64 arm64; do
+            dir="build/windows-$arch"
+            cp "$dir/ternssh-setup-$VERSION-$arch.exe" "dist/ternssh-$VERSION-windows-$arch-setup.exe"
+            # The portable app: the executable and what ships beside it.
+            (cd "$dir" && zip -q "$GITHUB_WORKSPACE/dist/ternssh-$VERSION-windows-$arch-portable.zip" \
+              $(ls | grep -v -e '^ternssh-setup-' -e '^\.mygo-files$'))
+          done
+          ls -l dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --title "ternssh $VERSION" --generate-notes $prerelease

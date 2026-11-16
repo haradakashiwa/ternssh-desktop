@@ -1,0 +1,37 @@
+# ternssh desktop
+
+ternssh 的桌面客户端，使用 [MyGo](https://github.com/egoist/mygo) 原生 UI 编写（无 WebView）。
+
+- 不添加站点也能独立使用：第一个标签「本机」里的服务器只保存在本机，凭据存在系统钥匙串。
+- 想在多台设备间同步时，添加 ternssh 站点，每个站点成为顶部的一个标签（右键可编辑、刷新、排序、移除）。站点标签列出站点上的服务器（含分组），在其中添加、编辑、删除服务器都会写回站点（`/api/v1/servers`），网页端和其他设备同步可见。
+- ternssh 站点只用来同步 SSH 信息：所有连接都由本机直接发起 SSH（`golang.org/x/crypto/ssh`）。连接站点服务器时，现从站点获取凭据（`GET /api/v1/servers/:id/credential`，需要较新的 ternssh）。
+- 首次连接记录主机密钥（存在本机），之后不一致会拒绝连接。
+- 「本机」标签也可以添加本地终端（本机 shell，可设起始目录）。
+- 全部展开/收起：侧栏底部「新建分组」左边的按钮（有分组时显示），有收起的分组时点它全部展开，否则全部收起；分组右键菜单里也有。
+- 分组：侧栏左下角的文件夹按钮新建分组，右键分组可新建子分组、重命名、删除（子分组一起删除，其中的服务器和终端移到顶层）。拖拽可调整顺序和分组：拖到一行的上半部分插在它前面、下半部分插在它后面（显示插入线）；拖到分组标题上移入分组末尾（分组高亮），拖到标题最上沿插在分组前面；拖到列表空白处移到顶层末尾。站点标签里的分组和移动会写回站点（`/api/v1/servers/groups`、`/api/v1/servers/move`）；「本机」的分组存在本机。
+- 鼠标中键点击终端标签可关闭它（和浏览器一样：在标签上按下并松开才关闭）。
+- 新建会话：macOS 按 ⌘T，Windows/Linux 按 Ctrl+Shift+T（Ctrl+T 留给 shell），或点终端标签栏的「+」。有打开的终端时在同一台服务器/同一个本地终端上再开一个；否则打开侧栏选中的项；「本机」里都没有时打开本地终端（没有就自动建一个）。
+- 终端由 MyGo 的 terminal 插件（libghostty-vt）渲染，背景透明，透出窗口的磨玻璃材质。
+- 站点认证支持：无、Basic（用户名密码）、Cloudflare Access 服务令牌。
+
+## 开发
+
+需要 Go 1.27.3+（`GOTOOLCHAIN=auto` 会自动下载）。
+
+```sh
+make dev              # 开发运行（热重载），自动按当前系统；也可 make dev-mac / make dev-windows
+go tool mygo dev      # 同上
+go tool mygo build    # 打包 build/darwin-arm64/ternssh.app 和 .dmg
+go test ./...         # 测试
+SNAPSHOT_DIR=/tmp/snap go test ./gui   # 输出界面快照
+```
+
+## 目录
+
+| 路径 | |
+|---|---|
+| `main.go` | 窗口、系统钥匙串、文件选择等平台相关部分 |
+| `gui/` | 原生界面与状态：站点标签、侧栏、终端区、对话框 |
+| `internal/ternssh` | ternssh 站点的 HTTP API 客户端 |
+| `internal/sshconn` | 终端连接：本机直连 SSH，凭据可在连接时从站点获取 |
+| `internal/store` | 站点与本地服务器配置（`config.json`），密钥存系统钥匙串 |

@@ -1,0 +1,9 @@
+{
+  "name": "ternssh",
+  "slug": "ternssh",
+  "identifier": "com.ternssh.desktop",
+  "version": "0.1.0",
+  "icon": "resources/icon.png",
+  "out": "build",
+  "macos": { "minimumSystemVersion": "13.0" }
+}

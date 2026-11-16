@@ -1,0 +1,4 @@
+build/
+.mygo/
+/ternssh-desktop
+.DS_Store

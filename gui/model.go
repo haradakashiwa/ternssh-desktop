@@ -57,6 +57,10 @@ type Backend struct {
 	Dial func(opts sshconn.LocalOptions, ev sshconn.Events) Conn
 	// PickFile asks for a file, as a private key to import; nil for none.
 	PickFile func() (string, error)
+	// PickFiles asks for files to upload; nil for none.
+	PickFiles func() ([]string, error)
+	// SaveFile asks where to save a file named name; "" when canceled.
+	SaveFile func(name string) (string, error)
 }
 
 // Model is the state of the window.
@@ -74,6 +78,11 @@ type Model struct {
 
 	groupForm     groupForm
 	groupFormOpen bool
+
+	prompt     prompt
+	promptOpen bool
+
+	filesSplit float32 // the share of a session's height its terminal takes over its files, in percent
 
 	confirm     confirmation
 	confirmOpen bool
@@ -123,11 +132,16 @@ type session struct {
 	status   sshconn.Status
 	err      string
 	dir      string
+
+	showFiles, showStatus bool        // whether its panels show, at first for servers
+	files                 *filesState // the files panel, once shown
+	stats                 statsSource // the server's status, sampled once the panel shows
+	iface                 string      // the network interface its status shows
 }
 
 // New returns the model of the window: the home tab, then the sites of st.
 func New(st *store.Store, b Backend) *Model {
-	m := &Model{store: st, backend: b}
+	m := &Model{store: st, backend: b, filesSplit: 62}
 	home := m.newSiteState(store.Site{Name: "本机"})
 	home.local, home.terminals, home.groups = st.Servers(), st.Terminals(), st.Groups()
 	m.sites = []*siteState{home}
@@ -355,6 +369,7 @@ func portSuffix(port int) string {
 func (m *Model) open(s *siteState, sess *session, dial func(sshconn.Events) Conn) {
 	sess.id = store.NewID()
 	sess.status = sshconn.StatusConnecting
+	sess.showFiles, sess.showStatus = true, true
 	sess.conn = dial(sshconn.Events{
 		OnStatus: func(st sshconn.Status, err error) {
 			m.update(func() {
@@ -504,6 +519,7 @@ func (m *Model) closeSession(s *siteState, i int) {
 		return
 	}
 	sess := s.sessions[i]
+	closePanels(sess)
 	if sess.term != nil {
 		sess.term.Close()
 	} else if sess.conn != nil {

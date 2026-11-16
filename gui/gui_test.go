@@ -9,16 +9,20 @@ import (
 	"image/draw"
 	"image/png"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
+	"github.com/pkg/sftp"
 
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
@@ -243,6 +247,262 @@ func TestFoldAllGroups(t *testing.T) {
 	tt.Frame()
 	if _, ok := tt.Find("全部收起"); ok {
 		t.Error("a tab without groups shows the button")
+	}
+}
+
+// fakeStats is a server's status sampled already.
+type fakeStats struct{ h []sshconn.Stats }
+
+func (f *fakeStats) History() []sshconn.Stats { return f.h }
+func (f *fakeStats) Err() error               { return nil }
+func (f *fakeStats) Stop()                    {}
+
+func sampleStats(n int) []sshconn.Stats {
+	var h []sshconn.Stats
+	start := time.Unix(1_700_000_000, 0)
+	for i := range n {
+		wave := float64((i*37)%23) / 23
+		h = append(h, sshconn.Stats{
+			At: start.Add(time.Duration(i) * 2 * time.Second), Host: "web-01", Cores: 4,
+			CPU: 0.25, Load: [3]float64{0.52, 0.40, 0.31}, Uptime: 75 * time.Hour,
+			MemUsed: 3 << 30, MemTotal: 8 << 30, SwapUsed: 256 << 20, SwapTotal: 1 << 30,
+			Disks: []sshconn.Disk{{Mount: "/", Used: 18 << 30, Size: 40 << 30}, {Mount: "/data", Used: 420 << 30, Size: 1000 << 30}},
+			RX:    200_000 + 1_800_000*wave + 3000, TX: 80_000 + 400_000*(1-wave) + 1000,
+			Ifaces: []sshconn.Iface{
+				{Name: "docker0", RX: 3000, TX: 1000},
+				{Name: "eth0", RX: 200_000 + 1_800_000*wave, TX: 80_000 + 400_000*(1-wave)},
+			},
+			Procs: []sshconn.Proc{
+				{PID: 812, Name: "nginx", CPU: 42.5, Mem: 120 << 20},
+				{PID: 1033, Name: "postgres: checkpointer process with a long name", CPU: 12, Mem: 900 << 20},
+				{PID: 77, Name: "node", CPU: 3.2, Mem: 300 << 20},
+				{PID: 1, Name: "systemd", CPU: 0, Mem: 12 << 20},
+			},
+		})
+	}
+	return h
+}
+
+// updatesHere makes the model's updates wait for apply, as for a main
+// thread; apply runs them until done reports true.
+func updatesHere(t *testing.T, m *Model) (apply func(done func() bool)) {
+	updates := make(chan func(), 64)
+	m.backend.Update = func(fn func()) { updates <- fn }
+	return func(done func() bool) {
+		t.Helper()
+		deadline := time.After(5 * time.Second)
+		for !done() {
+			select {
+			case fn := <-updates:
+				fn()
+			case <-deadline:
+				t.Fatal("timed out")
+			}
+		}
+	}
+}
+
+func TestPanelToggles(t *testing.T) {
+	m, st := testModel(t)
+	withSites(t, m, st)
+	site := m.sites[1]
+	m.openSynced(site, site.tree[1])
+	sess := site.sessions[0]
+	tt := ui.NewTester(m.View, 1100, 700)
+	// Both show at first, until the connection is up.
+	if !sess.showFiles || !sess.showStatus || !tt.HasText("连接成功后显示服务器状态") || !tt.HasText("连接成功后可以浏览服务器上的文件") {
+		t.Fatalf("files %v, status %v, texts %q", sess.showFiles, sess.showStatus, tt.Texts())
+	}
+	// The files below the terminal, the status beside it.
+	files, _ := tt.Find("连接成功后可以浏览服务器上的文件")
+	status, _ := tt.Find("连接成功后显示服务器状态")
+	if files.Y < 300 || status.X < 800 {
+		t.Errorf("files at %v, status at %v", files, status)
+	}
+	tt.Click("文件 (SFTP)")
+	if sess.showFiles || tt.HasText("连接成功后可以浏览服务器上的文件") {
+		t.Errorf("files still shown")
+	}
+	tt.Click("服务器状态")
+	if sess.showStatus || tt.HasText("连接成功后显示服务器状态") {
+		t.Errorf("status still shown")
+	}
+	tt.Click("文件 (SFTP)")
+	if !sess.showFiles {
+		t.Errorf("files not shown again")
+	}
+	// A local terminal has none.
+	m.selectSite(0)
+	m.newSession()
+	tt.Frame()
+	if _, ok := tt.Find("服务器状态"); ok || tt.HasText("连接成功后可以浏览服务器上的文件") {
+		t.Error("a local terminal shows the panels")
+	}
+}
+
+func TestStatusPanel(t *testing.T) {
+	m, st := testModel(t)
+	withSites(t, m, st)
+	site := m.sites[1]
+	m.openSynced(site, site.tree[1])
+	sess := site.sessions[0]
+	sess.stats = &fakeStats{sampleStats(60)}
+	tt := ui.NewTester(m.View, 1200, 760)
+	for _, want := range []string{"web-01", "运行 3 天 3 小时", "4 核 · 负载 0.52  0.40  0.31", "CPU", "25%",
+		"3.0 GB / 8.0 GB", "交换 256 MB / 1.0 GB", "存储", "18.0 GB / 40.0 GB", "/data", "网络", "最近 3 分钟"} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	for _, want := range []string{"进程", "nginx", "812", "42.5%", "120 MB", "900 MB", "全部网卡"} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	// One interface: its rates, not every one's.
+	sess.iface = "docker0"
+	tt.Frame()
+	if !tt.HasText("下行 2.9 KB/s") || !tt.HasText("上行 1000 B/s") {
+		t.Errorf("docker0's rates are not shown: %q", tt.Texts())
+	}
+	// Gone, all of them again.
+	sess.iface = "eth9"
+	tt.Frame()
+	if sess.iface != allIfaces {
+		t.Errorf("iface %q", sess.iface)
+	}
+	snapshot(t, tt, "status")
+	tt.SetDark(true)
+	snapshot(t, tt, "status-dark")
+	tt.SetDark(false)
+
+	// Hovering the chart reads a sample.
+	r, ok := tt.Find("网络流量图")
+	if !ok {
+		t.Fatal("no chart")
+	}
+	tt.Move(r.X+r.W-0.5, r.Y+r.H/2)
+	tt.Frame()
+	if !tt.HasText("现在 · 下行 " + formatRate(sess.stats.History()[59].RX) + " · 上行 " + formatRate(sess.stats.History()[59].TX)) {
+		t.Errorf("no reading at the right edge: %q", tt.Texts())
+	}
+	tt.Move(r.X+r.W*0.6, r.Y+r.H/2)
+	tt.Frame()
+	if !strings.Contains(strings.Join(tt.Texts(), " "), "秒前 · 下行") {
+		t.Errorf("no reading earlier: %q", tt.Texts())
+	}
+	snapshot(t, tt, "status-hover")
+}
+
+func TestFilesPanel(t *testing.T) {
+	dir := t.TempDir()
+	os.Mkdir(filepath.Join(dir, "logs"), 0o755)
+	os.WriteFile(filepath.Join(dir, "logs", "app.log"), []byte("started"), 0o644)
+	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("hello"), 0o644)
+	a, b := net.Pipe()
+	srv, _ := sftp.NewServer(a, sftp.WithServerWorkingDirectory(dir))
+	go srv.Serve()
+	client, err := sftp.NewClientPipe(b, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { client.Close() })
+
+	m, st := testModel(t)
+	withSites(t, m, st)
+	apply := updatesHere(t, m)
+	site := m.sites[1]
+	m.openSynced(site, site.tree[1])
+	sess := site.sessions[0]
+	f := &filesState{fs: sshconn.NewFiles(client), selected: -1}
+	sess.files = f
+	m.listDir(f, dir)
+	apply(func() bool { return !f.loading })
+	tt := ui.NewTester(m.View, 1200, 760)
+	for _, want := range []string{"logs", "notes.txt", "5 B"} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	snapshot(t, tt, "files")
+
+	// Into a directory, and up again.
+	f.selected = 0
+	m.listDir(f, path.Join(dir, f.entries[0].Name))
+	apply(func() bool { return !f.loading })
+	tt.Frame()
+	if f.dir != path.Join(dir, "logs") || !tt.HasText("app.log") {
+		t.Fatalf("dir %q, texts %q", f.dir, tt.Texts())
+	}
+	tt.Click("上级目录")
+	apply(func() bool { return !f.loading })
+	if f.dir != dir {
+		t.Fatalf("dir %q after going up", f.dir)
+	}
+
+	// A new folder, by the prompt.
+	tt.Frame()
+	if err := tt.Click("新建文件夹"); err != nil {
+		t.Fatal(err)
+	}
+	m.prompt.value = "a/b"
+	tt.Frame()
+	tt.Click("新建")
+	if m.prompt.err == "" || !m.promptOpen {
+		t.Errorf("a name with / was taken")
+	}
+	m.prompt.value = "backup"
+	tt.Frame()
+	tt.Click("新建")
+	apply(func() bool { return !f.loading && len(f.entries) == 3 })
+	if fi, err := os.Stat(filepath.Join(dir, "backup")); err != nil || !fi.IsDir() {
+		t.Errorf("no folder: %v", err)
+	}
+
+	// Up and down.
+	local := filepath.Join(t.TempDir(), "deploy.sh")
+	os.WriteFile(local, []byte("#!/bin/sh\necho hi\n"), 0o755)
+	m.upload(f, []string{local})
+	apply(func() bool { return len(f.transfers) == 1 && f.transfers[0].finished && !f.loading })
+	if b, err := os.ReadFile(filepath.Join(dir, "deploy.sh")); err != nil || string(b) != "#!/bin/sh\necho hi\n" {
+		t.Errorf("uploaded %q, %v", b, err)
+	}
+	if f.transfers[0].err != "" || !slices.ContainsFunc(f.entries, func(e sshconn.Entry) bool { return e.Name == "deploy.sh" }) {
+		t.Errorf("transfer %+v, entries %v", f.transfers[0], f.entries)
+	}
+	dest := filepath.Join(t.TempDir(), "notes.txt")
+	m.download(f, path.Join(dir, "notes.txt"), dest)
+	apply(func() bool { return f.transfers[1].finished })
+	if b, _ := os.ReadFile(dest); string(b) != "hello" {
+		t.Errorf("downloaded %q", b)
+	}
+	tt.Frame()
+	if !tt.HasText("传输") || !tt.HasText("deploy.sh") {
+		t.Errorf("no transfers: %q", tt.Texts())
+	}
+	snapshot(t, tt, "files-transfers")
+
+	// Removed, with what is in it.
+	m.fileOp(f, func() error { return f.fs.Remove(path.Join(dir, "logs")) })
+	apply(func() bool { return !f.loading && len(f.entries) == 3 })
+	if _, err := os.Stat(filepath.Join(dir, "logs")); !os.IsNotExist(err) {
+		t.Errorf("logs is still there: %v", err)
+	}
+}
+
+func TestFormat(t *testing.T) {
+	for _, c := range []struct {
+		n    uint64
+		want string
+	}{{0, "0 B"}, {1023, "1023 B"}, {1536, "1.5 KB"}, {3 << 30, "3.0 GB"}, {420 << 30, "420 GB"}} {
+		if got := formatBytes(c.n); got != c.want {
+			t.Errorf("formatBytes(%d) = %q, want %q", c.n, got, c.want)
+		}
+	}
+	for _, c := range []struct{ v, want float64 }{{900, 1024}, {1500, 2048}, {3 << 20, 5 << 20}, {600 << 20, 1 << 30}} {
+		if got := niceCeil(c.v); got != c.want {
+			t.Errorf("niceCeil(%v) = %v, want %v", c.v, got, c.want)
+		}
 	}
 }
 

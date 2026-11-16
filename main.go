@@ -58,6 +58,12 @@ func main() {
 			Dial: func(opts sshconn.LocalOptions, ev sshconn.Events) gui.Conn {
 				return sshconn.DialLocal(opts, ev)
 			},
+			PickFiles: func() ([]string, error) {
+				return mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: "选择要上传的文件", Multiple: true, ShowHiddenFiles: true})
+			},
+			SaveFile: func(name string) (string, error) {
+				return mygo.Dialog.Save(mygo.SaveDialogOptions{Parent: win, Title: "下载到", DefaultPath: name, CreateDirectories: true})
+			},
 			PickFile: func() (string, error) {
 				paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: "选择私钥文件", ShowHiddenFiles: true})
 				if len(paths) == 0 {

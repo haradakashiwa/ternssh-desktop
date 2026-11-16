@@ -202,6 +202,17 @@ func (l *Local) keepalive(client *ssh.Client) {
 	}
 }
 
+// Client returns the SSH connection once the shell is ready, for SFTP and
+// the server's status over it; nil before.
+func (l *Local) Client() *ssh.Client {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.session == nil {
+		return nil
+	}
+	return l.client
+}
+
 // Write sends what is typed to the shell.
 func (l *Local) Write(p []byte) (int, error) {
 	l.mu.Lock()

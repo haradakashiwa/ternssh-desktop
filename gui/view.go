@@ -5,7 +5,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 
 	"ternssh-desktop/internal/sshconn"
@@ -39,6 +38,7 @@ func (m *Model) View(c *ui.Context) {
 	m.siteDialog(c)
 	m.serverDialog(c)
 	m.groupDialog(c)
+	m.promptDialog(c)
 	m.confirmDialog(c)
 	m.toastView(c)
 }
@@ -436,18 +436,24 @@ func (m *Model) workspace(c *ui.Context, s *siteState) {
 		}
 		ui.Box(c).Height(1).Background(hairline(c)).Shrink(0)
 		sess := s.sessions[s.current]
-		ui.Column(c).Key(sess.id).Grow(1).MinHeight(0).Children(func() {
-			if sess.term != nil {
-				terminal.View(c, sess.term).Fill().AutoFocus()
-			}
-		})
+		m.sessionView(c, sess)
 		m.statusBar(c, s, sess)
 	})
 }
 
 func (m *Model) sessionTabs(c *ui.Context, s *siteState) {
+	ui.Row(c).Shrink(0).AlignItems(ui.Center).Padding(0, 8, 0, 0).Gap(2).Children(func() {
+		m.tabStrip(c, s)
+		if s.current >= 0 && s.current < len(s.sessions) {
+			m.panelButtons(c, s.sessions[s.current])
+		}
+	})
+}
+
+// tabStrip is the tabs of the terminals, which scroll when they are many.
+func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 	t := c.Theme()
-	ui.ScrollHorizontal(c).Shrink(0).Scrollbars(false).Children(func() {
+	ui.ScrollHorizontal(c).Grow(1).MinWidth(0).Scrollbars(false).Children(func() {
 		ui.Row(c).Height(40).Padding(0, 6).Gap(4).AlignItems(ui.Center).Children(func() {
 			closed := -1
 			for i, sess := range s.sessions {

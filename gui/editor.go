@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -12,6 +11,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"ternssh-desktop/internal/sshconn"
+	"ternssh-desktop/locales"
 )
 
 // editorMaxSize is the largest file an editor opens.
@@ -42,7 +42,7 @@ type Editor struct {
 	Title string
 
 	path  string
-	where string // the server, or 本机
+	where string // the server, or "" for this machine (本机)
 	fs    editorFiles
 	host  EditorHost
 
@@ -66,7 +66,7 @@ type Editor struct {
 }
 
 func newEditor(fs editorFiles, p, name, where string) *Editor {
-	return &Editor{Title: name + " — " + where, path: p, where: where, fs: fs, buf: ui.NewTextBuffer(""), loading: true}
+	return &Editor{Title: name + " — " + whereLabel(where), path: p, where: where, fs: fs, buf: ui.NewTextBuffer(""), loading: true}
 }
 
 func (e *Editor) update(fn func()) {
@@ -83,17 +83,17 @@ func (e *Editor) load() {
 		switch {
 		case err != nil:
 		case fi.IsDir():
-			err = errors.New("这是一个目录")
+			err = errors.New(locales.EditorIsFolder())
 		case fi.Size() > editorMaxSize:
 			err = sshconn.ErrTooLarge
 		default:
 			data, err = e.fs.ReadFile(e.path, editorMaxSize)
 		}
 		if errors.Is(err, sshconn.ErrTooLarge) {
-			err = errors.New("文件超过 " + formatBytes(editorMaxSize) + "，不能在这里编辑")
+			err = errors.New(locales.EditorTooLarge(formatBytes(editorMaxSize)))
 		}
 		if err == nil && (bytes.IndexByte(data, 0) >= 0 || !utf8.Valid(data)) {
-			err = errors.New("这不是 UTF-8 文本文件，不能在这里编辑")
+			err = errors.New(locales.EditorNotText())
 		}
 		e.update(func() {
 			e.loading = false
@@ -143,7 +143,7 @@ func (e *Editor) save(force bool) {
 		e.update(func() {
 			e.saving = false
 			if err != nil {
-				e.saveErr = "保存失败：" + err.Error()
+				e.saveErr = locales.EditorSaveFailed(err.Error())
 				e.closeAfterSave = false
 				return
 			}
@@ -186,16 +186,16 @@ func (e *Editor) View(c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(8, 12).Gap(10).AlignItems(ui.Center).Shrink(0).Children(func() {
 			ui.Icon(c, fileIcon).Size(14, 14).TextColor(t.TextMuted).Shrink(0)
-			ui.Text(c, e.where+"  "+e.path).Font("monospace").FontSize(12).TextColor(t.TextMuted).
+			ui.Text(c, whereLabel(e.where)+"  "+e.path).Font("monospace").FontSize(12).TextColor(t.TextMuted).
 				SingleLine().Ellipsis("…").Grow(1).Shrink(1).MinWidth(0)
 			switch {
 			case e.saving:
 				ui.Spinner(c).Size(12, 12)
-				ui.Text(c, "正在保存…").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, locales.EditorSaving()).FontSize(12).TextColor(t.TextMuted)
 			case dirty:
-				ui.Text(c, "未保存").FontSize(12).TextColor(accentInk(c))
+				ui.Text(c, locales.EditorUnsaved()).FontSize(12).TextColor(accentInk(c))
 			}
-			b := ui.PrimaryButton(c, "保存").Disabled(!dirty || e.saving).Tooltip("保存 (" + saveShortcut() + ")")
+			b := ui.PrimaryButton(c, locales.Save()).Disabled(!dirty || e.saving).Tooltip(locales.EditorSaveTooltip(saveShortcut()))
 			if b.Clicked() {
 				e.save(false)
 			}
@@ -206,11 +206,11 @@ func (e *Editor) View(c *ui.Context) {
 		}
 		if e.conflict {
 			ui.Row(c).Padding(6, 12).Gap(8).AlignItems(ui.Center).Background(t.Warning.Alpha(0.14)).Shrink(0).Children(func() {
-				ui.Text(c, "文件在打开后已被其他程序修改。").FontSize(12).Grow(1)
-				if ui.Button(c, "取消").Clicked() {
+				ui.Text(c, locales.EditorConflict()).FontSize(12).Grow(1)
+				if ui.Button(c, locales.Cancel()).Clicked() {
 					e.conflict = false
 				}
-				if ui.PrimaryButton(c, "覆盖").Clicked() {
+				if ui.PrimaryButton(c, locales.EditorOverwrite()).Clicked() {
 					e.save(true)
 				}
 			})
@@ -222,20 +222,29 @@ func (e *Editor) View(c *ui.Context) {
 			panelHint(c, e.err)
 		default:
 			ui.TextAreaBufferBase(c, e.buf).Grow(1).MinHeight(0).Font("monospace").FontSize(13).
-				Padding(10, 14).AutoFocus().Label("内容").TextRanges(e.highlight(t.Dark)...)
+				Padding(10, 14).AutoFocus().Label(locales.EditorContent()).TextRanges(e.highlight(t.Dark)...)
 			ui.Box(c).Height(1).Background(hairline(c)).Shrink(0)
 			ending := "LF"
 			if e.crlf {
 				ending = "CRLF"
 			}
 			ui.Row(c).Padding(2, 12).Gap(12).AlignItems(ui.Center).Shrink(0).Children(func() {
-				ui.Text(c, strconv.Itoa(e.buf.LineCount())+" 行 · UTF-8 · "+ending).FontSize(11).TextColor(t.TextMuted)
+				ui.Text(c, locales.EditorStatus(e.buf.LineCount(), ending)).FontSize(11).TextColor(t.TextMuted)
 				ui.Spacer(c)
 				if e.buf.ByteLen() > highlightMax && e.lang != plainText {
-					ui.Text(c, "文件较大，不做高亮").FontSize(11).TextColor(t.TextMuted)
+					ui.Text(c, locales.EditorNoHighlight()).FontSize(11).TextColor(t.TextMuted)
 				}
-				ui.Select(c, &e.lang, languages).Label("语言").FontSize(11).MaxWidth(180).MinWidth(0).
+				// Plain text is chosen by its localized label.
+				options, chosen := e.hl.languageOptions(), e.lang
+				if chosen == plainText {
+					chosen = options[0]
+				}
+				ui.Select(c, &chosen, options).Label(locales.EditorLanguage()).FontSize(11).MaxWidth(180).MinWidth(0).
 					Padding(0).Gap(4).Border(0, ui.Transparent).Background(ui.Transparent).Shadow(0, 0, 0, 0, ui.Transparent)
+				if chosen == options[0] {
+					chosen = plainText
+				}
+				e.lang = chosen
 				if e.lang != e.hl.lang {
 					e.hl.setLanguage(e.lang)
 				}
@@ -243,10 +252,10 @@ func (e *Editor) View(c *ui.Context) {
 		}
 	})
 	dialog(c, &e.closeAsk, 380, func() {
-		dialogTitle(c, "保存对「"+baseName(e.path)+"」的修改？", "")
-		ui.Text(c, "不保存的话，这些修改会丢失。").FontSize(13).TextColor(t.TextMuted)
+		dialogTitle(c, locales.EditorCloseTitle(baseName(e.path)), "")
+		ui.Text(c, locales.EditorCloseMessage()).FontSize(13).TextColor(t.TextMuted)
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-			if ui.Button(c, "不保存").Clicked() {
+			if ui.Button(c, locales.EditorDontSave()).Clicked() {
 				e.closeAsk = false
 				e.saved = e.buf.Version()
 				if e.host.Close != nil {
@@ -254,15 +263,24 @@ func (e *Editor) View(c *ui.Context) {
 				}
 			}
 			ui.Spacer(c)
-			if ui.Button(c, "取消").Clicked() {
+			if ui.Button(c, locales.Cancel()).Clicked() {
 				e.closeAsk = false
 			}
-			if ui.PrimaryButton(c, "保存").Label("保存并关闭").Clicked() {
+			if ui.PrimaryButton(c, locales.Save()).Label(locales.EditorSaveAndClose()).Clicked() {
 				e.closeAsk, e.closeAfterSave = false, true
 				e.save(false)
 			}
 		})
 	})
+}
+
+// whereLabel is what an editor says its file is on: the server, or this
+// machine.
+func whereLabel(where string) string {
+	if where == "" {
+		return locales.ThisMachine()
+	}
+	return where
 }
 
 func saveShortcut() string {
@@ -306,7 +324,7 @@ func (m *Model) openEditor(sess *session, f *filesState, p string) {
 		}
 		return
 	}
-	where := "本机"
+	where := ""
 	if !f.local {
 		where = sess.subtitle
 	}

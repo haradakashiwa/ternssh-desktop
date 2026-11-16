@@ -13,8 +13,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
+
+	"ternssh-desktop/locales"
 )
 
 // Auth is how requests to a site authenticate.
@@ -52,17 +55,17 @@ type Client struct {
 func NormalizeURL(raw string) (*url.URL, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return nil, errors.New("请输入站点地址")
+		return nil, errors.New(locales.SiteAddressRequired())
 	}
 	if !strings.Contains(raw, "://") {
 		raw = "https://" + raw
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
-		return nil, fmt.Errorf("站点地址无效: %s", raw)
+		return nil, errors.New(locales.SiteAddressInvalid(raw))
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return nil, fmt.Errorf("站点地址只支持 http 或 https")
+		return nil, errors.New(locales.SiteAddressScheme())
 	}
 	return &url.URL{Scheme: u.Scheme, Host: u.Host}, nil
 }
@@ -89,18 +92,18 @@ func (e *Error) Error() string {
 	switch e.Status {
 	case http.StatusUnauthorized:
 		if e.Message != "" {
-			return "认证失败: " + e.Message
+			return locales.SiteAuthFailedMessage(e.Message)
 		}
-		return "认证失败，请检查站点的用户名和密码"
+		return locales.SiteAuthFailed()
 	case http.StatusForbidden:
 		if e.Message == "Setup required" {
-			return "站点尚未完成初始化，请先在浏览器中完成设置"
+			return locales.SiteSetupRequired()
 		}
 	}
 	if e.Message != "" {
 		return e.Message
 	}
-	return fmt.Sprintf("请求失败 (HTTP %d)", e.Status)
+	return locales.SiteRequestFailed(strconv.Itoa(e.Status))
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body, out any) error {
@@ -125,7 +128,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 	}
 	res, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("无法连接站点: %w", err)
+		return fmt.Errorf("%s: %w", locales.SiteUnreachable(), err)
 	}
 	defer res.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(res.Body, 8<<20))
@@ -149,13 +152,19 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		if strings.HasPrefix(strings.TrimSpace(string(data)), "<") {
 			return errPage
 		}
-		return fmt.Errorf("无法解析站点响应: %w", err)
+		return fmt.Errorf("%s: %w", locales.SiteBadResponse(), err)
 	}
 	return nil
 }
 
 // errPage is the answer of a web page where the API was asked.
-var errPage = errors.New("站点返回了网页而不是 API 响应：站点可能在 Cloudflare Access 之后，请配置 Access 服务令牌")
+var errPage error = &msgError{locales.SiteGotPage}
+
+// msgError is an error whose message is said in the language the app
+// shows as it is asked for, so that a sentinel error keeps its identity.
+type msgError struct{ msg func() string }
+
+func (e *msgError) Error() string { return e.msg() }
 
 // User is the site's user.
 type User struct {
@@ -301,7 +310,7 @@ func (c *Client) ServerCredential(ctx context.Context, id string) (*ServerCreden
 	// A site from before the API had this answers with its web app.
 	var apiErr *Error
 	if err == errPage || errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound && apiErr.Message == "" {
-		return nil, errors.New("站点版本过旧，不支持获取服务器凭据，请更新 ternssh")
+		return nil, errors.New(locales.SiteTooOld())
 	}
 	if err != nil {
 		return nil, err

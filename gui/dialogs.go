@@ -13,6 +13,7 @@ import (
 
 	"ternssh-desktop/internal/store"
 	"ternssh-desktop/internal/ternssh"
+	"ternssh-desktop/locales"
 )
 
 // request returns the context of a request to a site.
@@ -45,7 +46,7 @@ func dialogButtons(c *ui.Context, busy bool, primary string, cancel func(), subm
 		if busy {
 			ui.Spinner(c).Size(14, 14)
 		}
-		if ui.Button(c, "取消").Clicked() {
+		if ui.Button(c, locales.Cancel()).Clicked() {
 			cancel()
 		}
 		b := ui.PrimaryButton(c, primary).Disabled(busy)
@@ -96,39 +97,39 @@ func (m *Model) siteDialog(c *ui.Context) {
 	f := &m.siteForm
 	dialog(c, &m.siteFormOpen, 440, func() {
 		if f.editing == "" {
-			dialogTitle(c, "添加站点", "连接一个已部署的 ternssh 站点，它会成为顶部的一个标签。")
+			dialogTitle(c, locales.SiteAddTitle(), locales.SiteAddSubtitle())
 		} else {
-			dialogTitle(c, "编辑站点", "")
+			dialogTitle(c, locales.SiteEditTitle(), "")
 		}
 		ui.Form(c, func() {
-			ui.Field(c, "地址", func() {
+			ui.Field(c, locales.SiteFieldAddress(), func() {
 				ui.TextInput(c, &f.url).Placeholder("ssh.example.com").AutoFocus()
 			})
-			ui.Field(c, "名称", func() {
-				ui.TextInput(c, &f.name).Placeholder("可选，默认使用站点名称")
+			ui.Field(c, locales.DialogFieldName(), func() {
+				ui.TextInput(c, &f.name).Placeholder(locales.SiteNamePlaceholder())
 			})
-			ui.Field(c, "认证方式", func() {
-				ui.Segmented(c, &f.auth, "无", "用户名密码", "Access 令牌").Label("认证方式")
+			ui.Field(c, locales.SiteFieldAuth(), func() {
+				ui.Segmented(c, &f.auth, locales.SiteAuthNone(), locales.SiteAuthBasic(), locales.SiteAuthAccess()).Label(locales.SiteFieldAuth())
 			})
 			keep := ""
 			if f.editing != "" {
-				keep = "留空则保持不变"
+				keep = locales.DialogKeepBlank()
 			}
 			switch f.auth {
 			case 1:
-				ui.Field(c, "用户名", func() { ui.TextInput(c, &f.username) })
-				ui.Field(c, "密码", func() { ui.TextInput(c, &f.password).Password().Placeholder(keep) })
+				ui.Field(c, locales.DialogFieldUsername(), func() { ui.TextInput(c, &f.username) })
+				ui.Field(c, locales.DialogFieldPassword(), func() { ui.TextInput(c, &f.password).Password().Placeholder(keep) })
 			case 2:
 				ui.Field(c, "Client ID", func() { ui.TextInput(c, &f.clientID).Placeholder("xxxx.access") })
 				ui.Field(c, "Client Secret", func() { ui.TextInput(c, &f.clientSecret).Password().Placeholder(keep) })
 			}
 		})
 		if f.auth == 2 {
-			ui.Text(c, "站点在 Cloudflare Access 之后时，请在 Zero Trust 中创建服务令牌，并在应用策略中允许它（Service Auth）。").
+			ui.Text(c, locales.SiteAccessHint()).
 				FontSize(11).TextColor(c.Theme().TextMuted)
 		}
 		errorText(c, f.err)
-		dialogButtons(c, f.busy, map[bool]string{true: "添加", false: "保存"}[f.editing == ""],
+		dialogButtons(c, f.busy, addOrSave(f.editing == ""),
 			func() { m.siteFormOpen = false }, m.saveSite)
 	})
 }
@@ -151,13 +152,13 @@ func (m *Model) saveSite() {
 	case store.AuthBasic:
 		site.Username, secret = strings.TrimSpace(f.username), f.password
 		if site.Username == "" {
-			f.err = "请输入用户名"
+			f.err = locales.DialogErrUsername()
 			return
 		}
 	case store.AuthAccess:
 		site.ClientID, secret = strings.TrimSpace(f.clientID), strings.TrimSpace(f.clientSecret)
 		if site.ClientID == "" {
-			f.err = "请输入 Client ID"
+			f.err = locales.SiteErrClientID()
 			return
 		}
 	}
@@ -165,7 +166,7 @@ func (m *Model) saveSite() {
 		secret = m.store.SiteSecret(f.editing)
 	}
 	if secret == "" && site.Auth != store.AuthNone {
-		f.err = "请输入密码或 Client Secret"
+		f.err = locales.SiteErrSecret()
 		return
 	}
 
@@ -192,7 +193,7 @@ func (m *Model) saveSite() {
 				return
 			}
 			if err := m.store.PutSite(site, secret); err != nil {
-				f.err = "无法保存站点: " + err.Error()
+				f.err = locales.SiteErrSave(err.Error())
 				return
 			}
 			m.siteFormOpen = false
@@ -241,16 +242,25 @@ const (
 )
 
 func (m *Model) openServerForm(s *siteState) {
-	m.serverForm = serverForm{site: s, port: "22", username: "root", group: noGroup}
+	m.serverForm = serverForm{site: s, port: "22", username: "root"}
 	m.serverFormOpen = true
 }
 
-const noGroup = "（不分组）"
+// noGroup is the picker's choice of no group, which the form keeps as "".
+func noGroup() string { return locales.ServerNoGroup() }
+
+// addOrSave is the label of a form's primary button.
+func addOrSave(adding bool) string {
+	if adding {
+		return locales.Add()
+	}
+	return locales.Save()
+}
 
 // groupChoices lists the groups of a tab, as paths, for the group picker,
 // with their IDs.
 func groupChoices(s *siteState) ([]string, map[string]string) {
-	names, ids := []string{noGroup}, map[string]string{}
+	names, ids := []string{noGroup()}, map[string]string{}
 	if !s.home() {
 		groups(s.tree, "", &names, ids)
 		return names, ids
@@ -270,7 +280,7 @@ func groupChoices(s *siteState) ([]string, map[string]string) {
 	return names, ids
 }
 
-// groupPath is the path of a group in the picker, noGroup for none.
+// groupPath is the path of a group in the picker, empty for none.
 func groupPath(s *siteState, id string) string {
 	_, ids := groupChoices(s)
 	for path, gid := range ids {
@@ -278,7 +288,7 @@ func groupPath(s *siteState, id string) string {
 			return path
 		}
 	}
-	return noGroup
+	return ""
 }
 
 // groupID is the ID of the group the form chose, empty for none.
@@ -291,7 +301,20 @@ func (f *serverForm) groupID() string {
 func groupField(c *ui.Context, f *serverForm) {
 	names, _ := groupChoices(f.site)
 	if len(names) > 1 {
-		ui.Field(c, "分组", func() { ui.Select(c, &f.group, names).Label("分组") })
+		// The form keeps "" for no group, so that the choice outlives a
+		// change of language; the picker shows its label.
+		group := f.group
+		if group == "" {
+			group = noGroup()
+		}
+		ui.Field(c, locales.DialogFieldGroup(), func() {
+			if ui.Select(c, &group, names).Label(locales.DialogFieldGroup()).Changed() {
+				if group == noGroup() {
+					group = ""
+				}
+				f.group = group
+			}
+		})
 	}
 }
 
@@ -317,57 +340,62 @@ func (m *Model) serverDialog(c *ui.Context) {
 	home := f.site.home()
 	dialog(c, &m.serverFormOpen, 500, func() {
 		if home && f.editing == "" {
-			dialogTitle(c, "添加到本机", "")
-			ui.Segmented(c, &f.kind, "SSH 服务器", "本地终端").Label("类型")
+			dialogTitle(c, locales.ServerAddToLocalTitle(), "")
+			ui.Segmented(c, &f.kind, locales.ServerKindServer(), locales.TerminalFormLocalTerminal()).Label(locales.ServerKindLabel())
 		}
 		if home && f.kind == kindTerminal {
 			m.terminalForm(c, f)
 			return
 		}
-		title := map[bool]string{true: "添加服务器", false: "编辑服务器"}[f.editing == ""]
+		title := locales.ServerEditTitle()
+		if f.editing == "" {
+			title = locales.ServerAddTitle()
+		}
 		switch {
 		case !home:
-			dialogTitle(c, title, "保存到站点「"+f.site.displayName()+"」")
+			dialogTitle(c, title, locales.DialogSavedToSite(f.site.displayName()))
 		case f.editing != "":
-			dialogTitle(c, title, "保存在本机")
+			dialogTitle(c, title, locales.DialogSavedLocally())
 		}
 		ui.Form(c, func() {
-			ui.Field(c, "名称", func() { ui.TextInput(c, &f.name).Placeholder("例如：生产数据库").AutoFocus() })
-			ui.Field(c, "主机", func() {
+			ui.Field(c, locales.DialogFieldName(), func() { ui.TextInput(c, &f.name).Placeholder(locales.ServerNamePlaceholder()).AutoFocus() })
+			ui.Field(c, locales.ServerFieldHost(), func() {
 				ui.Row(c).Gap(8).Children(func() {
-					ui.TextInput(c, &f.host).Placeholder("IP 或域名").Grow(1)
-					ui.TextInput(c, &f.port).Width(64).Label("端口")
+					ui.TextInput(c, &f.host).Placeholder(locales.ServerHostPlaceholder()).Grow(1)
+					ui.TextInput(c, &f.port).Width(64).Label(locales.ServerFieldPort())
 				})
 			})
-			ui.Field(c, "用户名", func() { ui.TextInput(c, &f.username) })
-			ui.Field(c, "认证", func() { ui.Segmented(c, &f.authType, "密码", "私钥").Label("认证") })
+			ui.Field(c, locales.DialogFieldUsername(), func() { ui.TextInput(c, &f.username) })
+			ui.Field(c, locales.ServerFieldAuth(), func() {
+				ui.Segmented(c, &f.authType, locales.DialogFieldPassword(), locales.ServerFieldKey()).Label(locales.ServerFieldAuth())
+			})
 			keep := ""
 			if f.editing != "" {
-				keep = "留空则保持不变"
+				keep = locales.DialogKeepBlank()
 			}
 			if f.authType == 0 {
-				ui.Field(c, "密码", func() { ui.TextInput(c, &f.password).Password().Placeholder(keep) })
+				ui.Field(c, locales.DialogFieldPassword(), func() { ui.TextInput(c, &f.password).Password().Placeholder(keep) })
 			} else {
-				ui.Field(c, "私钥", func() {
+				ui.Field(c, locales.ServerFieldKey(), func() {
 					ui.Column(c).Gap(6).Children(func() {
 						ui.TextArea(c, &f.key).Lines(4, 6).Font("monospace").FontSize(11).
 							Placeholder(map[bool]string{true: keep, false: "-----BEGIN OPENSSH PRIVATE KEY-----"}[keep != ""])
-						if m.backend.PickFile != nil && ui.Button(c, "从文件导入…").Clicked() {
+						if m.backend.PickFile != nil && ui.Button(c, locales.ServerImportKey()).Clicked() {
 							m.importKey(f)
 						}
 					})
 				})
-				ui.Field(c, "私钥密码", func() { ui.TextInput(c, &f.pass).Password().Placeholder("未加密则留空") })
+				ui.Field(c, locales.ServerFieldPassphrase(), func() { ui.TextInput(c, &f.pass).Password().Placeholder(locales.ServerPassphrasePlaceholder()) })
 			}
 			groupField(c, f)
 		})
 		if home {
-			ui.Text(c, "凭据只保存在本机的系统钥匙串中。").FontSize(11).TextColor(t.TextMuted)
+			ui.Text(c, locales.ServerLocalHint()).FontSize(11).TextColor(t.TextMuted)
 		} else {
-			ui.Text(c, "服务器和凭据保存到站点，网页端和其他设备同步可用。连接时本机从站点获取凭据，直接发起 SSH。").FontSize(11).TextColor(t.TextMuted)
+			ui.Text(c, locales.ServerSiteHint()).FontSize(11).TextColor(t.TextMuted)
 		}
 		errorText(c, f.err)
-		dialogButtons(c, f.busy, map[bool]string{true: "添加", false: "保存"}[f.editing == ""],
+		dialogButtons(c, f.busy, addOrSave(f.editing == ""),
 			func() { m.serverFormOpen = false }, m.saveServer)
 	})
 }
@@ -386,7 +414,7 @@ func (m *Model) importKey(f *serverForm) {
 				return
 			}
 			if len(b) > 64<<10 {
-				f.err = "文件太大，不像是私钥"
+				f.err = locales.ServerErrKeyTooLarge()
 				return
 			}
 			f.key = string(b)
@@ -397,23 +425,23 @@ func (m *Model) importKey(f *serverForm) {
 // terminalForm is the dialog's form of a local terminal.
 func (m *Model) terminalForm(c *ui.Context, f *serverForm) {
 	if f.editing != "" {
-		dialogTitle(c, "编辑终端", "")
+		dialogTitle(c, locales.TerminalFormEditTitle(), "")
 	}
 	ui.Form(c, func() {
-		ui.Field(c, "名称", func() { ui.TextInput(c, &f.name).Placeholder("本地终端").AutoFocus() })
-		ui.Field(c, "起始目录", func() {
+		ui.Field(c, locales.DialogFieldName(), func() { ui.TextInput(c, &f.name).Placeholder(locales.TerminalFormLocalTerminal()).AutoFocus() })
+		ui.Field(c, locales.TerminalFormStartDir(), func() {
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				ui.TextInput(c, &f.dir).Placeholder("~（主目录）").Grow(1)
-				if m.backend.PickDir != nil && ui.Button(c, "选择…").Clicked() {
+				ui.TextInput(c, &f.dir).Placeholder(locales.TerminalFormStartDirPlaceholder()).Grow(1)
+				if m.backend.PickDir != nil && ui.Button(c, locales.TerminalFormChooseDir()).Clicked() {
 					m.pickDir(f)
 				}
 			})
 		})
 		groupField(c, f)
 	})
-	ui.Text(c, "在本机打开 shell。").FontSize(11).TextColor(c.Theme().TextMuted)
+	ui.Text(c, locales.TerminalFormHint()).FontSize(11).TextColor(c.Theme().TextMuted)
 	errorText(c, f.err)
-	dialogButtons(c, false, map[bool]string{true: "添加", false: "保存"}[f.editing == ""],
+	dialogButtons(c, false, addOrSave(f.editing == ""),
 		func() { m.serverFormOpen = false }, m.saveTerminal)
 }
 
@@ -443,11 +471,11 @@ func (m *Model) saveTerminal() {
 	s := f.site
 	t := store.Terminal{ID: f.editing, Name: strings.TrimSpace(f.name), Dir: strings.TrimSpace(f.dir), GroupID: f.groupID()}
 	if t.Name == "" {
-		t.Name = "本地终端"
+		t.Name = locales.TerminalFormLocalTerminal()
 	}
 	if t.Dir != "" {
 		if fi, err := os.Stat(expandHome(t.Dir)); err != nil || !fi.IsDir() {
-			f.err = "目录不存在: " + t.Dir
+			f.err = locales.TerminalFormErrNoDir(t.Dir)
 			return
 		}
 	}
@@ -455,7 +483,7 @@ func (m *Model) saveTerminal() {
 		t.ID = store.NewID()
 	}
 	if err := m.store.PutTerminal(t); err != nil {
-		f.err = "无法保存: " + err.Error()
+		f.err = locales.DialogErrSave(err.Error())
 		return
 	}
 	s.terminals = m.store.Terminals()
@@ -475,15 +503,15 @@ func (m *Model) saveServer() {
 	}
 	switch {
 	case name == "":
-		f.err = "请输入名称"
+		f.err = locales.DialogErrName()
 	case host == "" || strings.ContainsAny(host, " /@"):
-		f.err = "请输入有效的主机地址"
+		f.err = locales.ServerErrHost()
 	case perr != nil || port < 1 || port > 65535:
-		f.err = "端口应在 1 到 65535 之间"
+		f.err = locales.ServerErrPort()
 	case user == "":
-		f.err = "请输入用户名"
+		f.err = locales.DialogErrUsername()
 	case credential == "" && f.editing == "":
-		f.err = map[bool]string{true: "请输入私钥", false: "请输入密码"}[f.authType == 1]
+		f.err = credentialMissing(f.authType == 1)
 	default:
 		f.err = ""
 	}
@@ -513,12 +541,12 @@ func (m *Model) saveServer() {
 		} else if old, err := m.store.ServerCredential(srv.ID); err == nil {
 			// The kind of credential changed without a new one.
 			if (authType == "private_key") != (old.PrivateKey != "") {
-				f.err = map[bool]string{true: "请输入私钥", false: "请输入密码"}[f.authType == 1]
+				f.err = credentialMissing(f.authType == 1)
 				return
 			}
 		}
 		if err := m.store.PutServer(srv, cred); err != nil {
-			f.err = "无法保存: " + err.Error()
+			f.err = locales.DialogErrSave(err.Error())
 			return
 		}
 		s.local = m.store.Servers()
@@ -535,7 +563,7 @@ func (m *Model) saveServer() {
 	var save func(context.Context) (string, error)
 	if editing != "" {
 		if credential == "" && authType != f.origAuth {
-			f.err = map[bool]string{true: "请输入私钥", false: "请输入密码"}[f.authType == 1]
+			f.err = credentialMissing(f.authType == 1)
 			return
 		}
 		u := ternssh.ServerUpdate{Name: name, Host: host, Port: port, Username: user, AuthType: authType, GroupID: groupID}
@@ -572,7 +600,7 @@ func (m *Model) saveServer() {
 			if err != nil {
 				var apiErr *ternssh.Error
 				if errors.As(err, &apiErr) {
-					f.err = "站点拒绝了: " + apiErr.Error()
+					f.err = locales.ServerErrSiteRefused(apiErr.Error())
 				} else {
 					f.err = err.Error()
 				}
@@ -583,6 +611,14 @@ func (m *Model) saveServer() {
 			m.refresh(s)
 		})
 	}()
+}
+
+// credentialMissing is the error of a form without its credential.
+func credentialMissing(key bool) string {
+	if key {
+		return locales.ServerErrKey()
+	}
+	return locales.ServerErrPassword()
 }
 
 // --- Confirmation
@@ -602,7 +638,7 @@ func (m *Model) confirmDialog(c *ui.Context) {
 		dialogTitle(c, q.title, "")
 		ui.Text(c, q.message).FontSize(13).TextColor(c.Theme().TextMuted)
 		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-			if ui.Button(c, "取消").Clicked() {
+			if ui.Button(c, locales.Cancel()).Clicked() {
 				m.confirmOpen = false
 			}
 			b := ui.PrimaryButton(c, q.action).Background(c.Theme().Danger)

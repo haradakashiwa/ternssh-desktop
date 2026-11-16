@@ -2,13 +2,14 @@ package sshconn
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"ternssh-desktop/locales"
 )
 
 // LocalFiles is this machine's files, as Files is a server's.
@@ -68,7 +69,7 @@ func (LocalFiles) Remove(p string) error { return os.RemoveAll(p) }
 func (LocalFiles) Upload(local, dir string, progress Progress) (string, error) {
 	to := filepath.Join(dir, filepath.Base(local))
 	if same(local, to) {
-		return "", fmt.Errorf("%s 已经在这个目录里", filepath.Base(local))
+		return "", errors.New(locales.SshAlreadyInFolder(filepath.Base(local)))
 	}
 	return to, copyFile(local, to, progress)
 }
@@ -76,7 +77,7 @@ func (LocalFiles) Upload(local, dir string, progress Progress) (string, error) {
 // Download copies a file to the path local.
 func (LocalFiles) Download(from, local string, progress Progress) error {
 	if same(from, local) {
-		return errors.New("不能复制到它自己")
+		return errors.New(locales.SshCopyIntoItself())
 	}
 	return copyFile(from, local, progress)
 }
@@ -101,7 +102,7 @@ func copyFile(from, to string, progress Progress) error {
 		return err
 	}
 	if fi.IsDir() {
-		return fmt.Errorf("%s 是目录，只能复制文件", filepath.Base(from))
+		return errors.New(locales.SshCopyFolder(filepath.Base(from)))
 	}
 	dst, err := os.OpenFile(to, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode().Perm())
 	if err != nil {
@@ -149,7 +150,7 @@ func (LocalFiles) ReadFile(p string, max int64) ([]byte, error) {
 func (LocalFiles) WriteFile(p string, data []byte) error { return os.WriteFile(p, data, 0o644) }
 
 // ErrTooLarge is a file too large to read whole.
-var ErrTooLarge = errors.New("文件太大")
+var ErrTooLarge error = &msgError{locales.SshTooLarge}
 
 func readMax(r io.Reader, max int64) ([]byte, error) {
 	b, err := io.ReadAll(io.LimitReader(r, max+1))

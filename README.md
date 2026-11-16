@@ -26,6 +26,7 @@
 - **快捷指令**：一键在终端运行常用命令，站点的指令与网页端共享。
 - **服务器状态**：CPU、内存、磁盘、网络流量和进程的实时监控（Linux）。
 - **托盘与全局快捷键**：关闭窗口后驻留托盘，随时一键唤出。
+- **多语言**：简体中文和英文，默认跟随系统，可在设置中切换。
 
 ## 开发
 
@@ -55,4 +56,5 @@ git tag v0.2.0 && git push origin v0.2.0
 | `gui/` | 原生界面与状态：站点标签、侧栏、终端、面板、编辑器、对话框 |
 | `internal/ternssh` | ternssh 站点的 HTTP API 客户端 |
 | `internal/sshconn` | SSH 连接、SFTP 与本机文件 |
+| `locales/` | 界面文字：`en.json`（源语言）和 `zh-Hans.json`，`catalog_gen.go` 由 `mygo dev`/`mygo build`/`mygo generate` 生成 |
 | `internal/store` | 站点、本地服务器、快捷指令与设置（`config.json`），密钥存系统钥匙串 |

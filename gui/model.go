@@ -20,6 +20,7 @@ import (
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
 	"ternssh-desktop/internal/ternssh"
+	"ternssh-desktop/locales"
 )
 
 // Mode is where a server is kept. Either way this machine makes the SSH
@@ -73,6 +74,9 @@ type Backend struct {
 	// system-wide shortcut that shows and hides the window, in place of
 	// the one before; "" removes it.
 	SetHotkey func(acc string) error
+	// SetLanguage makes the app show the language of tag, as "en", or
+	// the system's for "".
+	SetLanguage func(tag string)
 }
 
 // Model is the state of the window.
@@ -170,7 +174,7 @@ type session struct {
 // New returns the model of the window: the home tab, then the sites of st.
 func New(st *store.Store, b Backend) *Model {
 	m := &Model{store: st, backend: b, filesSplit: 62}
-	home := m.newSiteState(store.Site{Name: "本机"})
+	home := m.newSiteState(store.Site{})
 	home.local, home.terminals, home.groups = st.Servers(), st.Terminals(), st.Groups()
 	m.sites = []*siteState{home}
 	active := st.ActiveSite()
@@ -249,7 +253,7 @@ func (m *Model) refresh(s *siteState) {
 		return
 	}
 	if s.client == nil {
-		s.err = "站点地址无效"
+		s.err = locales.ModelSiteURLInvalid()
 		return
 	}
 	s.loading = true
@@ -277,6 +281,9 @@ func (m *Model) refresh(s *siteState) {
 // displayName is the name of a site's tab: the site name it set for
 // itself, or the one given here.
 func (s *siteState) displayName() string {
+	if s.home() {
+		return locales.ThisMachine()
+	}
 	if s.site.Name != "" {
 		return s.site.Name
 	}
@@ -363,7 +370,7 @@ func (m *Model) openSynced(s *siteState, node ternssh.Node) {
 func (m *Model) openLocal(s *siteState, srv store.Server) {
 	cred, err := m.store.ServerCredential(srv.ID)
 	if err != nil {
-		m.notify("无法读取 " + srv.Name + " 的凭据: " + err.Error())
+		m.notify(locales.ModelCredentialFailed(srv.Name, err.Error()))
 		return
 	}
 	opts := sshconn.LocalOptions{
@@ -414,7 +421,7 @@ func (m *Model) open(s *siteState, sess *session, dial func(sshconn.Events) Conn
 		term, err := m.backend.NewTerminal(sess.conn)
 		if err != nil {
 			sess.conn.Close()
-			m.notify("无法创建终端: " + err.Error())
+			m.notify(locales.ModelTerminalCreateFailed(err.Error()))
 			return
 		}
 		sess.term = term
@@ -441,7 +448,7 @@ func (m *Model) openShell(s *siteState, t store.Terminal) {
 			m.update(func() { sess.status = sshconn.StatusClosed })
 		})
 		if err != nil {
-			m.notify("无法打开终端: " + err.Error())
+			m.notify(locales.ModelTerminalOpenFailed(err.Error()))
 			return
 		}
 		sess.term = term
@@ -472,14 +479,14 @@ func (m *Model) newSession() {
 		return
 	}
 	if !s.home() {
-		m.notify("先在左侧选择一台服务器")
+		m.notify(locales.ModelSelectServerFirst())
 		return
 	}
 	terms := m.store.Terminals()
 	if len(terms) == 0 {
-		t := store.Terminal{ID: store.NewID(), Name: "本地终端"}
+		t := store.Terminal{ID: store.NewID(), Name: locales.ModelLocalTerminal()}
 		if err := m.store.PutTerminal(t); err != nil {
-			m.notify("无法保存终端: " + err.Error())
+			m.notify(locales.ModelTerminalSaveFailed(err.Error()))
 			return
 		}
 		terms = []store.Terminal{t}
@@ -599,7 +606,7 @@ func (m *Model) reconnect(s *siteState, i int) {
 				return
 			}
 		}
-		m.notify("终端 " + sess.title + " 已被删除")
+		m.notify(locales.ModelTerminalDeleted(sess.title))
 		return
 	}
 	for _, srv := range m.store.Servers() {
@@ -610,7 +617,7 @@ func (m *Model) reconnect(s *siteState, i int) {
 			return
 		}
 	}
-	m.notify("服务器 " + sess.title + " 已被删除")
+	m.notify(locales.ModelServerDeleted(sess.title))
 }
 
 // moveLast moves the last session to i, where the one it replaced was.

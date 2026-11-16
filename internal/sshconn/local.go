@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"ternssh-desktop/locales"
 )
 
 // LocalOptions is a server this machine connects to itself.
@@ -65,9 +67,9 @@ func (l *Local) authMethods() ([]ssh.AuthMethod, error) {
 		if err != nil {
 			var missing *ssh.PassphraseMissingError
 			if errors.As(err, &missing) {
-				return nil, errors.New("私钥已加密，请填写私钥密码")
+				return nil, errors.New(locales.SshKeyEncrypted())
 			}
-			return nil, fmt.Errorf("无法读取私钥: %w", err)
+			return nil, fmt.Errorf("%s: %w", locales.SshKeyUnreadable(), err)
 		}
 		return []ssh.AuthMethod{ssh.PublicKeys(signer)}, nil
 	}
@@ -88,13 +90,13 @@ func (l *Local) hostKey(_ string, _ net.Addr, key ssh.PublicKey) error {
 	fp := ssh.FingerprintSHA256(key)
 	switch {
 	case l.opts.HostKey == "":
-		l.notice("首次连接，已记录主机密钥 %s", fp)
+		l.notice(locales.SshHostKeyRecorded(fp))
 		if l.opts.OnHostKey != nil {
 			l.opts.OnHostKey(fp)
 		}
 		return nil
 	case l.opts.HostKey != fp:
-		return fmt.Errorf("主机密钥与上次不符，可能存在中间人攻击\r\n  记录的: %s\r\n  收到的: %s\r\n如确认服务器已重装，请在服务器菜单中「重置主机密钥」", l.opts.HostKey, fp)
+		return errors.New(locales.SshHostKeyMismatch(l.opts.HostKey, fp))
 	}
 	return nil
 }
@@ -102,7 +104,7 @@ func (l *Local) hostKey(_ string, _ net.Addr, key ssh.PublicKey) error {
 func (l *Local) run() {
 	l.status(StatusConnecting, "")
 	if l.opts.Resolve != nil {
-		l.notice("正在从站点获取连接信息…")
+		l.notice(locales.SshFetchingCredentials())
 		ctx, cancel := context.WithTimeout(l.ctx, 20*time.Second)
 		err := l.opts.Resolve(ctx, &l.opts)
 		cancel()
@@ -115,7 +117,7 @@ func (l *Local) run() {
 		}
 	}
 	addr := net.JoinHostPort(l.opts.Host, strconv.Itoa(l.opts.Port))
-	l.notice("正在从本机连接 %s@%s…", l.opts.Username, addr)
+	l.notice(locales.SshConnecting(l.opts.Username, addr))
 
 	auth, err := l.authMethods()
 	if err != nil {
@@ -129,13 +131,13 @@ func (l *Local) run() {
 		Timeout:         15 * time.Second,
 	})
 	if err != nil {
-		l.fail(fmt.Errorf("连接失败: %w", err))
+		l.fail(fmt.Errorf("%s: %w", locales.SshConnectFailed(), err))
 		return
 	}
 	session, err := client.NewSession()
 	if err != nil {
 		client.Close()
-		l.fail(fmt.Errorf("无法打开会话: %w", err))
+		l.fail(fmt.Errorf("%s: %w", locales.SshSessionFailed(), err))
 		return
 	}
 	stdin, err := session.StdinPipe()
@@ -153,12 +155,12 @@ func (l *Local) run() {
 	modes := ssh.TerminalModes{ssh.ECHO: 1, ssh.TTY_OP_ISPEED: 14400, ssh.TTY_OP_OSPEED: 14400}
 	if err := session.RequestPty("xterm-256color", size[1], size[0], modes); err != nil {
 		client.Close()
-		l.fail(fmt.Errorf("无法分配终端: %w", err))
+		l.fail(fmt.Errorf("%s: %w", locales.SshPtyFailed(), err))
 		return
 	}
 	if err := session.Shell(); err != nil {
 		client.Close()
-		l.fail(fmt.Errorf("无法启动 Shell: %w", err))
+		l.fail(fmt.Errorf("%s: %w", locales.SshShellFailed(), err))
 		return
 	}
 
@@ -184,7 +186,7 @@ func (l *Local) run() {
 		l.end()
 		return
 	}
-	l.fail(fmt.Errorf("连接已断开: %w", err))
+	l.fail(fmt.Errorf("%s: %w", locales.SshDisconnected(), err))
 }
 
 func (l *Local) keepalive(client *ssh.Client) {

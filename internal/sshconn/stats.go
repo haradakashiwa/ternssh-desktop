@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"ternssh-desktop/locales"
 )
 
 // A Linux server's status is read from /proc and df over the SSH
@@ -104,7 +106,7 @@ func (s Stats) Net(name string) (rx, tx float64) {
 }
 
 // errNotLinux is the error of a server without /proc.
-var errNotLinux = errors.New("无法读取服务器状态：只支持 Linux 服务器")
+var errNotLinux error = &msgError{locales.SshNotLinux}
 
 // parseSample reads the output of statsCommand.
 func parseSample(out string, at time.Time) (sample, error) {

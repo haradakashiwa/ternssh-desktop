@@ -1,0 +1,538 @@
+{
+  "@@locale": "en",
+  "add": "Add",
+  "appDownloadTo": "Download To",
+  "@appDownloadTo": {
+    "description": "Title of the save dialog for a download."
+  },
+  "appPickKey": "Choose Private Key File",
+  "appPickStartDir": "Choose Start Directory",
+  "@appPickStartDir": {
+    "description": "Title of the folder picker for a local terminal's start directory."
+  },
+  "appPickUpload": "Choose Files to Upload",
+  "builtinCompose": "Compose Services",
+  "builtinDisk": "Disk",
+  "@builtinDisk": {
+    "description": "A built-in quick command: df -h."
+  },
+  "builtinDocker": "Docker Containers",
+  "builtinLogs": "Recent Logs",
+  "builtinMemory": "Memory",
+  "@builtinMemory": {
+    "description": "A built-in quick command: free -h."
+  },
+  "builtinPorts": "Listening Ports",
+  "builtinPwd": "Current Directory",
+  "@builtinPwd": {
+    "description": "A built-in quick command: pwd."
+  },
+  "builtinTopCpu": "Top CPU",
+  "@builtinTopCpu": {
+    "description": "A built-in quick command: the processes using the most CPU."
+  },
+  "builtinTopMem": "Top Memory",
+  "@builtinTopMem": {
+    "description": "A built-in quick command: the processes using the most memory."
+  },
+  "builtinUptime": "Uptime",
+  "@builtinUptime": {
+    "description": "A built-in quick command: uptime."
+  },
+  "builtinWhoami": "Current User",
+  "@builtinWhoami": {
+    "description": "A built-in quick command: whoami."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "A button that dismisses a dialog."
+  },
+  "close": "Close",
+  "cmdAdd": "Add Quick Command",
+  "cmdBuiltin": "Built-in",
+  "cmdCommand": "Command",
+  "cmdCommandRequired": "Enter a command",
+  "cmdCopyCommand": "Copy Command",
+  "cmdDeleteFailed": "Couldn’t delete: {error}",
+  "cmdDeleteLocalMessage": "Only this quick command saved on this machine is deleted.",
+  "cmdDeleteSiteMessage": "It will be deleted from the site “{site}” and no longer appear in the web version.",
+  "cmdDeleteTitle": "Delete the quick command “{name}”?",
+  "cmdEditTitle": "Edit Quick Command",
+  "cmdEmpty": "No quick commands yet. Click “+” at the top right to add one.",
+  "cmdHint": "Click it to run it in the current terminal; multiple lines run one by one.",
+  "cmdName": "Name",
+  "cmdNamePlaceholder": "e.g. Check disk",
+  "cmdNameRequired": "Enter a name",
+  "cmdNotConnected": "The terminal isn’t connected, so the command can’t be sent",
+  "cmdPaste": "Paste into Terminal (Don’t Run)",
+  "cmdRefresh": "Refresh Quick Commands",
+  "cmdRun": "Run",
+  "cmdSaveToSite": "Saved to the site “{site}”; it also appears in the quick commands of the web version",
+  "cmdSourceLocal": "Saved on this machine",
+  "cmdSourceSite": "From the site “{site}”",
+  "cmdTabCommands": "Quick Commands",
+  "cmdTabFiles": "Files",
+  "@cmdTabFiles": {
+    "description": "The tab of the pane below a terminal that shows files."
+  },
+  "copy": "Copy",
+  "delete": "Delete",
+  "dialogErrName": "Enter a name",
+  "dialogErrSave": "Couldn’t save: {error}",
+  "dialogErrUsername": "Enter a username",
+  "dialogFieldGroup": "Group",
+  "@dialogFieldGroup": {
+    "description": "Form field picking the group an item goes in."
+  },
+  "dialogFieldName": "Name",
+  "@dialogFieldName": {
+    "description": "Form field label for a name."
+  },
+  "dialogFieldPassword": "Password",
+  "dialogFieldUsername": "Username",
+  "dialogKeepBlank": "Leave blank to keep unchanged",
+  "@dialogKeepBlank": {
+    "description": "Placeholder of a secret field when editing."
+  },
+  "dialogSavedLocally": "Kept on this machine",
+  "@dialogSavedLocally": {
+    "description": "Dialog subtitle: where the item is saved."
+  },
+  "dialogSavedToSite": "Saved to the site “{site}”",
+  "@dialogSavedToSite": {
+    "description": "Dialog subtitle: where the item is saved."
+  },
+  "done": "Done",
+  "edit": "Edit…",
+  "@edit": {
+    "description": "A menu item that opens a dialog to edit the item."
+  },
+  "editorCloseMessage": "Your changes will be lost if you don’t save them.",
+  "editorCloseTitle": "Save changes to “{name}”?",
+  "editorConflict": "The file was changed by another program after it was opened.",
+  "editorContent": "Content",
+  "editorDontSave": "Don’t Save",
+  "editorIsFolder": "This is a folder",
+  "editorLanguage": "Language",
+  "editorNoHighlight": "Large file, not highlighted",
+  "editorNotText": "This isn’t a UTF-8 text file and can’t be edited here",
+  "editorOverwrite": "Overwrite",
+  "editorPlainText": "Plain Text",
+  "editorSaveAndClose": "Save and Close",
+  "editorSaveFailed": "Couldn’t save: {error}",
+  "editorSaveTooltip": "Save ({shortcut})",
+  "editorSaving": "Saving…",
+  "editorStatus": "{count, plural, one {# line} other {# lines}} · UTF-8 · {ending}",
+  "@editorStatus": {
+    "description": "The editor's status bar: its lines, encoding and line endings (LF or CRLF).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ending": {
+        "type": "String",
+        "example": "LF"
+      }
+    }
+  },
+  "editorTooLarge": "The file is larger than {size} and can’t be edited here",
+  "editorUnsaved": "Unsaved",
+  "filesCantOpen": "Can’t open {path}: {error}",
+  "filesClearFinished": "Clear Finished",
+  "filesColumnModified": "Modified",
+  "filesColumnSize": "Size",
+  "filesCopyHere": "Copy Files Here",
+  "@filesCopyHere": {
+    "description": "Like Upload Files, in a folder of this machine."
+  },
+  "filesCopyPath": "Copy Path",
+  "filesCreate": "Create",
+  "@filesCreate": {
+    "description": "The button of the New Folder dialog."
+  },
+  "filesDeleteLocalFile": "This file will be deleted from this computer. This can’t be undone.",
+  "filesDeleteLocalFolder": "This folder and everything in it will be deleted from this computer. This can’t be undone.",
+  "filesDeleteRemoteFile": "This file will be deleted from the server. This can’t be undone.",
+  "filesDeleteRemoteFolder": "This folder and everything in it will be deleted from the server. This can’t be undone.",
+  "filesDeleteTitle": "Delete “{name}”?",
+  "filesDownload": "Download",
+  "filesDownloaded": "Downloaded to {path}",
+  "filesDownloadTo": "Download To…",
+  "filesEdit": "Edit",
+  "@filesEdit": {
+    "description": "A menu item that opens a file in the text editor."
+  },
+  "filesEmptyCopy": "Empty folder · Drop files here to copy",
+  "filesEmptyUpload": "Empty folder · Drop files here to upload",
+  "filesHintConnect": "Connect to browse the server’s files",
+  "filesLoading": "Loading…",
+  "filesName": "Name",
+  "filesNameRequired": "Enter a name",
+  "filesNameSlash": "A name can’t contain /",
+  "filesNewFolder": "New Folder",
+  "filesOpen": "Open",
+  "filesOpenWithDefault": "Open with Default App",
+  "filesPanelToggle": "Files & Quick Commands",
+  "@filesPanelToggle": {
+    "description": "A tab bar button that shows the bottom panel of files and quick commands."
+  },
+  "filesParentFolder": "Parent Folder",
+  "filesPath": "Path",
+  "filesRenameMenu": "Rename…",
+  "filesShowInExplorer": "Show in Explorer",
+  "filesShowInFileManager": "Show in File Manager",
+  "filesShowInFinder": "Show in Finder",
+  "filesTable": "Files",
+  "@filesTable": {
+    "description": "The accessibility label of the table of files."
+  },
+  "filesTransferFailed": "Failed",
+  "filesTransfers": "Transfers",
+  "filesTransferWaiting": "Waiting",
+  "filesUpload": "Upload Files",
+  "groupCollapseAll": "Collapse All",
+  "groupCreate": "Create",
+  "@groupCreate": {
+    "description": "Button creating a new group."
+  },
+  "groupDelete": "Delete Group",
+  "groupDeleteConfirmMessage": "Its subgroups are deleted with it. Its servers and terminals move to the top level and are not deleted.",
+  "groupDeleteConfirmTitle": "Delete the group “{name}”?",
+  "groupDeleted": "Deleted the group {name}",
+  "groupDeleteFailed": "Delete failed: {error}",
+  "groupErrMove": "Couldn’t move: {error}",
+  "groupExpandAll": "Expand All",
+  "groupMoveFailed": "Move failed: {error}",
+  "groupNamePlaceholder": "e.g. Production",
+  "groupNewSubgroup": "New Subgroup…",
+  "groupNewTitle": "New Group",
+  "groupRenameMenu": "Rename…",
+  "groupRenameTitle": "Rename Group",
+  "hotkeyClear": "Clear",
+  "hotkeyErrInUse": "Can’t use {hotkey}. It may be taken by the system or another app ({error}).",
+  "hotkeyErrModifier": "The shortcut must include {modifiers}",
+  "@hotkeyErrModifier": {
+    "description": "modifiers is a list of modifier keys, one of which is required."
+  },
+  "hotkeyErrRegister": "Couldn’t register the show/hide hotkey {hotkey}: {error}",
+  "hotkeyFieldLabel": "Show/Hide Hotkey",
+  "@hotkeyFieldLabel": {
+    "description": "Accessibility label of the hotkey recorder."
+  },
+  "hotkeyModifiersMac": "⌘, ⌥ or ⌃",
+  "hotkeyModifiersOther": "Ctrl, Alt or Win",
+  "hotkeyNotSet": "Not Set",
+  "hotkeyRecording": "Press a shortcut…",
+  "modelCredentialFailed": "Can’t read the credentials of {name}: {error}",
+  "modelLocalTerminal": "Local Terminal",
+  "@modelLocalTerminal": {
+    "description": "The name of the local terminal made when there is none."
+  },
+  "modelSelectServerFirst": "Select a server on the left first",
+  "modelServerDeleted": "Server {name} was deleted",
+  "modelSiteURLInvalid": "Invalid site address",
+  "modelTerminalCreateFailed": "Can’t create a terminal: {error}",
+  "modelTerminalDeleted": "Terminal {name} was deleted",
+  "modelTerminalOpenFailed": "Can’t open the terminal: {error}",
+  "modelTerminalSaveFailed": "Can’t save the terminal: {error}",
+  "refresh": "Refresh",
+  "rename": "Rename",
+  "retry": "Retry",
+  "save": "Save",
+  "serverAddTitle": "Add Server",
+  "serverAddToLocalTitle": "Add to Local",
+  "@serverAddToLocalTitle": {
+    "description": "Title of the dialog adding a server or terminal to the Local tab."
+  },
+  "serverEditTitle": "Edit Server",
+  "serverErrHost": "Enter a valid host",
+  "serverErrKey": "Enter a private key",
+  "serverErrKeyTooLarge": "The file is too large to be a private key",
+  "serverErrPassword": "Enter a password",
+  "serverErrPort": "The port must be between 1 and 65535",
+  "serverErrSiteRefused": "The site refused: {error}",
+  "serverFieldAuth": "Authentication",
+  "serverFieldHost": "Host",
+  "serverFieldKey": "Private Key",
+  "serverFieldPassphrase": "Passphrase",
+  "serverFieldPort": "Port",
+  "serverHostPlaceholder": "IP or domain",
+  "serverImportKey": "Import from File…",
+  "serverKindLabel": "Type",
+  "serverKindServer": "SSH Server",
+  "serverLocalHint": "Credentials are kept only in this machine’s system keychain.",
+  "serverNamePlaceholder": "e.g. Production Database",
+  "serverNoGroup": "(No Group)",
+  "@serverNoGroup": {
+    "description": "The group picker's choice of no group."
+  },
+  "serverPassphrasePlaceholder": "Leave blank if not encrypted",
+  "serverSiteHint": "The server and its credentials are saved to the site and sync to the web and your other devices. To connect, this machine gets the credentials from the site and opens SSH directly.",
+  "settingsErrSave": "Couldn’t save: {error}",
+  "settingsHotkey": "Show/Hide Hotkey",
+  "@settingsHotkey": {
+    "description": "A global shortcut that shows or hides the window."
+  },
+  "settingsHotkeyHint": "Press this shortcut in any app to show or hide the ternssh window.",
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {
+    "description": "Settings: the field choosing the app's language."
+  },
+  "settingsLanguageSystem": "System",
+  "@settingsLanguageSystem": {
+    "description": "Settings: follow the system's language."
+  },
+  "settingsMinimizeToMenuBar": "Minimize to Menu Bar",
+  "@settingsMinimizeToMenuBar": {
+    "description": "macOS."
+  },
+  "settingsMinimizeToTray": "Minimize to Tray",
+  "@settingsMinimizeToTray": {
+    "description": "Windows and Linux."
+  },
+  "settingsOnClose": "When Closing the Window",
+  "settingsQuitApp": "Quit App",
+  "settingsTitle": "Settings",
+  "siteAccessHint": "If the site is behind Cloudflare Access, create a service token in Zero Trust and allow it in the application’s policy (Service Auth).",
+  "siteAddressInvalid": "Invalid site address: {address}",
+  "siteAddressRequired": "Enter the site address",
+  "siteAddressScheme": "The site address must use http or https",
+  "siteAddSubtitle": "Connect a deployed ternssh site. It becomes a tab at the top.",
+  "siteAddTitle": "Add Site",
+  "siteAuthAccess": "Access Token",
+  "@siteAuthAccess": {
+    "description": "A Cloudflare Access service token."
+  },
+  "siteAuthBasic": "Basic",
+  "@siteAuthBasic": {
+    "description": "HTTP Basic authentication with a username and password."
+  },
+  "siteAuthFailed": "Authentication failed; check the site’s username and password",
+  "siteAuthFailedMessage": "Authentication failed: {message}",
+  "siteAuthNone": "None",
+  "siteBadResponse": "Couldn’t read the site’s response",
+  "siteEditTitle": "Edit Site",
+  "siteErrClientID": "Enter the Client ID",
+  "siteErrSave": "Couldn’t save the site: {error}",
+  "siteErrSecret": "Enter the password or Client Secret",
+  "siteFieldAddress": "Address",
+  "siteFieldAuth": "Authentication",
+  "siteGotPage": "The site returned a web page instead of an API response: it may be behind Cloudflare Access; configure an Access service token",
+  "siteNamePlaceholder": "Optional, defaults to the site’s name",
+  "siteNoCommand": "This quick command isn’t on the site; it may have been deleted",
+  "siteRequestFailed": "Request failed (HTTP {status})",
+  "siteSetupRequired": "The site isn’t set up yet; finish its setup in a browser first",
+  "siteTooOld": "The site’s version is too old to provide server credentials; update ternssh",
+  "siteUnreachable": "Couldn’t connect to the site",
+  "sshAlreadyInFolder": "{name} is already in this folder",
+  "sshConnectFailed": "Connection failed",
+  "sshConnecting": "Connecting from this machine to {user}@{addr}…",
+  "sshConnectionClosed": "Connection closed",
+  "@sshConnectionClosed": {
+    "description": "A notice in the terminal, as the shell exited."
+  },
+  "sshCopyFolder": "{name} is a folder; only files can be copied",
+  "sshCopyIntoItself": "Can’t copy a folder into itself",
+  "sshDisconnected": "Connection lost",
+  "sshFetchingCredentials": "Fetching connection details from the site…",
+  "sshHostKeyMismatch": "The host key differs from last time; this may be a man-in-the-middle attack\r\n  Recorded: {recorded}\r\n  Received: {received}\r\nIf you’re sure the server was reinstalled, choose “Reset Host Key” in the server’s menu",
+  "sshHostKeyRecorded": "First connection; recorded the host key {fingerprint}",
+  "sshKeyEncrypted": "The private key is encrypted; enter its passphrase",
+  "sshKeyUnreadable": "Couldn’t read the private key",
+  "sshNotLinux": "Couldn’t read the server’s status: only Linux servers are supported",
+  "sshPtyFailed": "Couldn’t allocate a terminal",
+  "sshSessionFailed": "Couldn’t open a session",
+  "sshSftpFailed": "Couldn’t open SFTP",
+  "sshShellFailed": "Couldn’t start the shell",
+  "sshStatusConnected": "Connected",
+  "sshStatusConnecting": "Connecting",
+  "sshStatusDisconnected": "Disconnected",
+  "sshStatusFailed": "Failed",
+  "sshTooLarge": "The file is too large",
+  "sshUploadFolder": "{name} is a folder; only files can be uploaded",
+  "statsAllInterfaces": "All interfaces",
+  "statsChart": "Network Traffic",
+  "@statsChart": {
+    "description": "The accessibility label of the network chart."
+  },
+  "statsCoresLoad": "{cores, plural, one {# core} other {# cores}} · load {load}",
+  "@statsCoresLoad": {
+    "description": "The server's CPU cores and its load averages over 1, 5 and 15 minutes.",
+    "placeholders": {
+      "cores": {
+        "type": "int"
+      },
+      "load": {
+        "type": "String",
+        "example": "0.52  0.40  0.31"
+      }
+    }
+  },
+  "statsHintConnect": "Server status shows once connected",
+  "statsIn": "In {rate}",
+  "@statsIn": {
+    "description": "The rate of data received."
+  },
+  "statsInterface": "Interface",
+  "statsLastMinutes": "{minutes, plural, one {Last minute} other {Last # minutes}}",
+  "@statsLastMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statsLoading": "Loading server status…",
+  "statsMemory": "Memory",
+  "statsNetwork": "Network",
+  "statsNow": "Now",
+  "statsOut": "Out {rate}",
+  "@statsOut": {
+    "description": "The rate of data sent."
+  },
+  "statsPeak": "Peak {rate}",
+  "statsProcesses": "Processes",
+  "statsReadFailed": "Last update failed: {error}",
+  "statsReading": "{when} · In {rx} · Out {tx}",
+  "@statsReading": {
+    "description": "The rates at the sample the pointer is over."
+  },
+  "statsSecondsAgo": "{seconds, plural, one {# second ago} other {# seconds ago}}",
+  "@statsSecondsAgo": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "statsStorage": "Storage",
+  "statsSwap": "Swap {used} / {total}",
+  "statsTitle": "Server Status",
+  "statsUptime": "Up {uptime}",
+  "@statsUptime": {
+    "description": "How long the server has run, as statsUptimeDays says it."
+  },
+  "statsUptimeDays": "{days, plural, one {# day} other {# days}}, {hours, plural, one {# hour} other {# hours}}",
+  "@statsUptimeDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "statsUptimeHours": "{hours, plural, one {# hour} other {# hours}}, {minutes, plural, one {# minute} other {# minutes}}",
+  "@statsUptimeHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statsUptimeMinutes": "{minutes, plural, one {# minute} other {# minutes}}",
+  "@statsUptimeMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "storeGroupCycle": "Can’t move a group into itself or one of its subgroups",
+  "storeNoCredentialStore": "No credential store is available",
+  "storeNoGroup": "The group doesn’t exist",
+  "storeNoServer": "The server doesn’t exist",
+  "storeNoTerminal": "The terminal doesn’t exist",
+  "terminalFormChooseDir": "Choose…",
+  "terminalFormEditTitle": "Edit Terminal",
+  "terminalFormErrNoDir": "No such directory: {dir}",
+  "terminalFormHint": "Opens a shell on this machine.",
+  "terminalFormLocalTerminal": "Local Terminal",
+  "@terminalFormLocalTerminal": {
+    "description": "A shell on this machine; also the default name of a new one."
+  },
+  "terminalFormStartDir": "Start Directory",
+  "terminalFormStartDirPlaceholder": "~ (home directory)",
+  "thisMachine": "Local",
+  "@thisMachine": {
+    "description": "The first tab, of servers and terminals kept on this machine, which needs no site."
+  },
+  "trayQuit": "Quit ternssh",
+  "traySettings": "Settings…",
+  "trayShow": "Show ternssh",
+  "viewAddServer": "Add Server",
+  "viewAddServerOrTerminal": "Add Server or Terminal",
+  "viewAddSite": "Add Site",
+  "viewCloseTab": "Close {title}",
+  "@viewCloseTab": {
+    "description": "The accessibility label of the close button of a terminal tab."
+  },
+  "viewConnectTo": "Connect to {name}",
+  "@viewConnectTo": {
+    "description": "The accessibility label of the terminal button of a server row."
+  },
+  "viewDeletedFromSite": "Deleted {name} from the site",
+  "viewDeleteFailed": "Couldn’t delete: {error}",
+  "viewDeleteFromSite": "Delete from Site",
+  "viewDeleteFromSiteMessage": "The server and its credentials will be deleted from the site {site} and will no longer appear on the web.",
+  "viewDeleteFromSiteTitle": "Delete “{name}” from the site?",
+  "viewDeleteServerMessage": "The connection details and credentials saved on this machine will be deleted.",
+  "viewDeleteServerTitle": "Delete the server “{name}”?",
+  "viewDeleteTerminalMessage": "Only this item is deleted. Files on this machine aren’t affected.",
+  "viewDeleteTerminalTitle": "Delete the terminal “{name}”?",
+  "viewEditSite": "Edit Site…",
+  "viewHomeEmpty": "No servers or local terminals yet. Click “Add Server or Terminal” below.",
+  "viewHostKeyReset": "Reset the host key of {name}; it will be recorded on the next connection",
+  "viewLoading": "Loading…",
+  "viewLocalTerminalShortcut": "Press {shortcut} to open a local terminal",
+  "viewMoveLeft": "Move Left",
+  "@viewMoveLeft": {
+    "description": "A menu item of a site's tab."
+  },
+  "viewMoveRight": "Move Right",
+  "@viewMoveRight": {
+    "description": "A menu item of a site's tab."
+  },
+  "viewNewGroup": "New Group",
+  "viewNewSession": "New Session",
+  "viewNewSessionTooltip": "New Session ({shortcut})",
+  "viewNoTerminals": "No open terminals",
+  "viewNoTerminalsHint": "Double-click a server on the left, or click the terminal button beside it, to open a terminal",
+  "viewOpenTerminal": "Open Terminal",
+  "viewReconnect": "Reconnect",
+  "viewRefreshFromSite": "Refresh from Site",
+  "viewRemove": "Remove",
+  "viewRemoveSite": "Remove Site",
+  "viewRemoveSiteMessage": "Its terminals will be closed and the site credentials saved on this machine deleted. Data on the site isn’t affected.",
+  "viewRemoveSiteTitle": "Remove the site “{name}”?",
+  "viewReopen": "Reopen",
+  "@viewReopen": {
+    "description": "The button that opens a local terminal again after its shell ended."
+  },
+  "viewResetHostKey": "Reset Host Key",
+  "viewSettings": "Settings",
+  "@viewSettings": {
+    "description": "The button in the title bar that opens the settings."
+  },
+  "viewShellExited": "Exited",
+  "@viewShellExited": {
+    "description": "The status of a local terminal whose shell ended."
+  },
+  "viewShellRunning": "Running",
+  "@viewShellRunning": {
+    "description": "The status of a local terminal whose shell runs."
+  },
+  "viewSiteEmpty": "No servers on this site yet. Click “Add Server” below.",
+  "viewSyncHint": "To sync servers across devices, click + at the top to add a ternssh site",
+  "viewTerminalShortcut": "Select a server and press {shortcut} to open a terminal",
+  "viewViaDirect": "Direct from this machine",
+  "@viewViaDirect": {
+    "description": "The status bar: the SSH connection is made from this machine."
+  },
+  "viewViaLocal": "Local terminal",
+  "viewViaSite": "Direct from this machine · credentials from {host}"
+}

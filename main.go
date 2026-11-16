@@ -21,6 +21,7 @@ import (
 	"ternssh-desktop/gui"
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
+	"ternssh-desktop/locales"
 )
 
 // trayIcon is the swallow in black, which the menu bar and the taskbar
@@ -43,6 +44,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// The language chosen in the settings, or the system's.
+	mygo.App.SetLocale(st.Settings().Language)
 
 	mygo.App.WhenReady(func() {
 		var win *mygo.Window
@@ -100,7 +104,7 @@ func main() {
 				return sshconn.DialLocal(opts, ev)
 			},
 			PickDir: func(start string) (string, error) {
-				paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: "选择起始目录", DefaultPath: start, Directory: true, CreateDirectories: true, ShowHiddenFiles: true})
+				paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: locales.AppPickStartDir(), DefaultPath: start, Directory: true, CreateDirectories: true, ShowHiddenFiles: true})
 				if len(paths) == 0 {
 					return "", err
 				}
@@ -130,18 +134,19 @@ func main() {
 				}
 			},
 			PickFiles: func() ([]string, error) {
-				return mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: "选择要上传的文件", Multiple: true, ShowHiddenFiles: true})
+				return mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: locales.AppPickUpload(), Multiple: true, ShowHiddenFiles: true})
 			},
 			SaveFile: func(name string) (string, error) {
-				return mygo.Dialog.Save(mygo.SaveDialogOptions{Parent: win, Title: "下载到", DefaultPath: name, CreateDirectories: true})
+				return mygo.Dialog.Save(mygo.SaveDialogOptions{Parent: win, Title: locales.AppDownloadTo(), DefaultPath: name, CreateDirectories: true})
 			},
 			PickFile: func() (string, error) {
-				paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: "选择私钥文件", ShowHiddenFiles: true})
+				paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: locales.AppPickKey(), ShowHiddenFiles: true})
 				if len(paths) == 0 {
 					return "", err
 				}
 				return paths[0], err
 			},
+			SetLanguage: mygo.App.SetLocale,
 			SetHotkey: func(acc string) error {
 				hotkey.Lock()
 				defer hotkey.Unlock()
@@ -198,24 +203,33 @@ func main() {
 		})
 		mygo.App.OnSecondInstance(func([]string, string) { show() })
 
-		_, err := mygo.NewTray(mygo.TrayOptions{
-			ID:             "ternssh",
-			Icon:           trayIcon,
-			IconIsTemplate: true,
-			ToolTip:        "ternssh",
-			Menu: mygo.NewMenu([]*mygo.MenuItem{
-				{Label: "显示 ternssh", Click: func(*mygo.MenuItem, *mygo.Window) { show() }},
-				{Label: "设置…", Click: func(*mygo.MenuItem, *mygo.Window) {
+		// trayMenu is made again in the language the app shows.
+		trayMenu := func() *mygo.Menu {
+			return mygo.NewMenu([]*mygo.MenuItem{
+				{Label: locales.TrayShow(), Click: func(*mygo.MenuItem, *mygo.Window) { show() }},
+				{Label: locales.TraySettings(), Click: func(*mygo.MenuItem, *mygo.Window) {
 					show()
 					win.Update(model.OpenSettings)
 				}},
 				mygo.Separator(),
-				{Label: "退出 ternssh", Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
-			}),
+				{Label: locales.TrayQuit(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
+			})
+		}
+		tray, err := mygo.NewTray(mygo.TrayOptions{
+			ID:             "ternssh",
+			Icon:           trayIcon,
+			IconIsTemplate: true,
+			ToolTip:        "ternssh",
+			Menu:           trayMenu(),
 		})
 		if err != nil {
 			log.Print("tray: ", err)
 		}
+		mygo.App.OnLocaleChanged(func(string) {
+			if tray != nil {
+				tray.SetMenu(trayMenu())
+			}
+		})
 		model.Start()
 	})
 	if err := mygo.App.Run(); err != nil {

@@ -9,10 +9,14 @@ import (
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/egoist/mygo/ui"
+
+	"ternssh-desktop/locales"
 )
 
 const (
-	plainText = "纯文本"
+	// plainText is the language of text not highlighted, which shows as
+	// editorPlainText; no lexer is named "".
+	plainText = ""
 	// Text past highlightMax is not highlighted, and text past lexInline
 	// is lexed away from the frame.
 	highlightMax = 1 << 20
@@ -27,6 +31,7 @@ type highlighter struct {
 	dark    bool
 	lexing  bool
 	ranges  []ui.TextRange
+	options []string // languageOptions
 }
 
 // detectLanguage returns the language of a file, by its name, or else by
@@ -46,12 +51,22 @@ func detectLanguage(name, text string) string {
 	return l.Config().Name
 }
 
-// languages are the names a language can be chosen by, plain text first.
-var languages = func() []string {
+// lexerNames are the names a language can be chosen by, plain text aside.
+var lexerNames = func() []string {
 	names := lexers.Names(false)
 	sort.Slice(names, func(i, j int) bool { return strings.ToLower(names[i]) < strings.ToLower(names[j]) })
-	return append([]string{plainText}, names...)
+	return names
 }()
+
+// languageOptions are the choices of the editor's language: plain text,
+// by its label in the language shown, then the lexers' names. They are
+// kept until the language shown changes.
+func (h *highlighter) languageOptions() []string {
+	if label := locales.EditorPlainText(); len(h.options) == 0 || h.options[0] != label {
+		h.options = append([]string{label}, lexerNames...)
+	}
+	return h.options
+}
 
 // setLanguage makes the highlighter lex as lang.
 func (h *highlighter) setLanguage(lang string) {

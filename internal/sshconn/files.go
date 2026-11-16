@@ -1,6 +1,7 @@
 package sshconn
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+
+	"ternssh-desktop/locales"
 )
 
 // Files is a server's files over SFTP.
@@ -20,7 +23,7 @@ type Files struct {
 func OpenFiles(client *ssh.Client) (*Files, error) {
 	c, err := sftp.NewClient(client)
 	if err != nil {
-		return nil, fmt.Errorf("无法打开 SFTP: %w", err)
+		return nil, fmt.Errorf("%s: %w", locales.SshSftpFailed(), err)
 	}
 	return &Files{c: c}, nil
 }
@@ -99,7 +102,7 @@ func (f *Files) Upload(local, dir string, progress Progress) (string, error) {
 		return "", err
 	}
 	if fi.IsDir() {
-		return "", fmt.Errorf("%s 是目录，只能上传文件", filepath.Base(local))
+		return "", errors.New(locales.SshUploadFolder(filepath.Base(local)))
 	}
 	to := path.Join(dir, filepath.Base(local))
 	dst, err := f.c.Create(to)

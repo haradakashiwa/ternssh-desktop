@@ -4,6 +4,8 @@ import (
 	"errors"
 	"slices"
 	"sort"
+
+	"ternssh-desktop/locales"
 )
 
 // What Move moves.
@@ -114,7 +116,13 @@ func (s *Store) nextSort(parent string) int {
 }
 
 // errCycle refuses moving a group into itself or a group in it.
-var errCycle = errors.New("不能把分组移到它自己或它的子分组里")
+var errCycle error = &msgError{locales.StoreGroupCycle}
+
+// msgError is an error whose message is said in the language the app
+// shows as it is asked for, so that a sentinel error keeps its identity.
+type msgError struct{ msg func() string }
+
+func (e *msgError) Error() string { return e.msg() }
 
 // Move moves a group, server or terminal into the group groupID, the top
 // when empty, to index among what else is there: last when index is out
@@ -123,13 +131,13 @@ func (s *Store) Move(kind, id, groupID string, index int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if groupID != "" && s.group(groupID) < 0 {
-		return errors.New("分组不存在")
+		return errors.New(locales.StoreNoGroup())
 	}
 	switch kind {
 	case KindGroup:
 		i := s.group(id)
 		if i < 0 {
-			return errors.New("分组不存在")
+			return errors.New(locales.StoreNoGroup())
 		}
 		for p := groupID; p != ""; {
 			if p == id {
@@ -145,13 +153,13 @@ func (s *Store) Move(kind, id, groupID string, index int) error {
 	case KindServer:
 		i := slices.IndexFunc(s.d.Servers, func(srv Server) bool { return srv.ID == id })
 		if i < 0 {
-			return errors.New("服务器不存在")
+			return errors.New(locales.StoreNoServer())
 		}
 		s.d.Servers[i].GroupID = groupID
 	case KindTerminal:
 		i := slices.IndexFunc(s.d.Terminals, func(t Terminal) bool { return t.ID == id })
 		if i < 0 {
-			return errors.New("终端不存在")
+			return errors.New(locales.StoreNoTerminal())
 		}
 		s.d.Terminals[i].GroupID = groupID
 	default:

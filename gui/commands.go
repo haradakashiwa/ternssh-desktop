@@ -8,6 +8,7 @@ import (
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
 	"ternssh-desktop/internal/ternssh"
+	"ternssh-desktop/locales"
 )
 
 // The tabs of the pane below a terminal.
@@ -17,19 +18,22 @@ const (
 )
 
 // builtinCommands are offered on every server, as the site's quick
-// command widget offers them.
-var builtinCommands = []ternssh.QuickCommand{
-	{ID: "builtin/uptime", Label: "运行时间", Command: "uptime"},
-	{ID: "builtin/whoami", Label: "当前用户", Command: "whoami"},
-	{ID: "builtin/pwd", Label: "当前目录", Command: "pwd"},
-	{ID: "builtin/disk", Label: "磁盘", Command: "df -h"},
-	{ID: "builtin/memory", Label: "内存", Command: "free -h"},
-	{ID: "builtin/top-mem", Label: "内存占用最高", Command: "ps -eo pid,user,pcpu,pmem,rss,stat,args --sort=-pmem 2>/dev/null | head -11"},
-	{ID: "builtin/top-cpu", Label: "CPU 占用最高", Command: "ps -eo pid,user,pcpu,pmem,rss,stat,args --sort=-pcpu 2>/dev/null | head -11"},
-	{ID: "builtin/docker", Label: "Docker 容器", Command: "docker ps"},
-	{ID: "builtin/compose", Label: "Compose 服务", Command: "docker compose ps 2>/dev/null || docker-compose ps"},
-	{ID: "builtin/ports", Label: "监听端口", Command: "ss -tlnp 2>/dev/null || netstat -tlnp"},
-	{ID: "builtin/logs", Label: "最近日志", Command: "journalctl -n 50 --no-pager 2>/dev/null || tail -n 50 /var/log/syslog 2>/dev/null || dmesg | tail -n 50"},
+// command widget offers them. Their labels are said in the language the
+// app shows, so they are made as they are asked for.
+func builtinCommands() []ternssh.QuickCommand {
+	return []ternssh.QuickCommand{
+		{ID: "builtin/uptime", Label: locales.BuiltinUptime(), Command: "uptime"},
+		{ID: "builtin/whoami", Label: locales.BuiltinWhoami(), Command: "whoami"},
+		{ID: "builtin/pwd", Label: locales.BuiltinPwd(), Command: "pwd"},
+		{ID: "builtin/disk", Label: locales.BuiltinDisk(), Command: "df -h"},
+		{ID: "builtin/memory", Label: locales.BuiltinMemory(), Command: "free -h"},
+		{ID: "builtin/top-mem", Label: locales.BuiltinTopMem(), Command: "ps -eo pid,user,pcpu,pmem,rss,stat,args --sort=-pmem 2>/dev/null | head -11"},
+		{ID: "builtin/top-cpu", Label: locales.BuiltinTopCpu(), Command: "ps -eo pid,user,pcpu,pmem,rss,stat,args --sort=-pcpu 2>/dev/null | head -11"},
+		{ID: "builtin/docker", Label: locales.BuiltinDocker(), Command: "docker ps"},
+		{ID: "builtin/compose", Label: locales.BuiltinCompose(), Command: "docker compose ps 2>/dev/null || docker-compose ps"},
+		{ID: "builtin/ports", Label: locales.BuiltinPorts(), Command: "ss -tlnp 2>/dev/null || netstat -tlnp"},
+		{ID: "builtin/logs", Label: locales.BuiltinLogs(), Command: "journalctl -n 50 --no-pager 2>/dev/null || tail -n 50 /var/log/syslog 2>/dev/null || dmesg | tail -n 50"},
+	}
 }
 
 // input sends text to the terminal of a session, as typed or pasted, and
@@ -50,8 +54,8 @@ var input = func(sess *session, text string, paste bool) bool {
 // this machine's, and the quick commands, in tabs.
 func (m *Model) bottomPanel(c *ui.Context, sess *session) {
 	ui.Row(c).Padding(6, 8, 0, 8).Gap(2).AlignItems(ui.Center).Shrink(0).Children(func() {
-		paneTab(c, "文件", &sess.bottomTab, tabFiles)
-		paneTab(c, "快捷指令", &sess.bottomTab, tabCommands)
+		paneTab(c, locales.CmdTabFiles(), &sess.bottomTab, tabFiles)
+		paneTab(c, locales.CmdTabCommands(), &sess.bottomTab, tabCommands)
 	})
 	ui.Column(c).Grow(1).MinHeight(0).Children(func() {
 		if sess.bottomTab == tabFiles {
@@ -127,14 +131,14 @@ func (m *Model) commandsPanel(c *ui.Context, sess *session) {
 		m.loadCommands(s)
 	}
 	ui.Row(c).Padding(6, 8, 4, 12).Gap(4).AlignItems(ui.Center).Shrink(0).Children(func() {
-		source := "保存在本机"
+		source := locales.CmdSourceLocal()
 		if !s.home() {
-			source = "来自站点「" + s.displayName() + "」"
+			source = locales.CmdSourceSite(s.displayName())
 		}
 		ui.Text(c, source).FontSize(11).TextColor(t.TextMuted).SingleLine().Shrink(1).MinWidth(0)
 		ui.Spacer(c)
 		if !s.home() {
-			b := iconButton(c, refreshIcon, "刷新快捷指令")
+			b := iconButton(c, refreshIcon, locales.CmdRefresh())
 			if s.commandsLoading {
 				b.Disabled(true)
 			}
@@ -142,7 +146,7 @@ func (m *Model) commandsPanel(c *ui.Context, sess *session) {
 				m.loadCommands(s)
 			}
 		}
-		if iconButton(c, plusIcon, "添加快捷指令").Clicked() {
+		if iconButton(c, plusIcon, locales.CmdAdd()).Clicked() {
 			m.openCommandForm(s, nil)
 		}
 	})
@@ -154,7 +158,7 @@ func (m *Model) commandsPanel(c *ui.Context, sess *session) {
 			case !s.commandsLoaded:
 				ui.Row(c).Padding(8).Center().Children(func() { ui.Spinner(c).Size(14, 14) })
 			case len(s.commands) == 0:
-				ui.Text(c, "还没有快捷指令，点右上角的「+」添加").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, locales.CmdEmpty()).FontSize(12).TextColor(t.TextMuted)
 			}
 			commandChips(c, func() {
 				for _, q := range s.commands {
@@ -162,9 +166,9 @@ func (m *Model) commandsPanel(c *ui.Context, sess *session) {
 				}
 			})
 			if sess.hasPanels() {
-				ui.Text(c, "内置").FontSize(11).Bold().TextColor(t.TextMuted).Padding(6, 0, 0, 0)
+				ui.Text(c, locales.CmdBuiltin()).FontSize(11).Bold().TextColor(t.TextMuted).Padding(6, 0, 0, 0)
 				commandChips(c, func() {
-					for _, q := range builtinCommands {
+					for _, q := range builtinCommands() {
 						m.commandChip(c, s, sess, q, false)
 					}
 				})
@@ -191,21 +195,21 @@ func (m *Model) commandChip(c *ui.Context, s *siteState, sess *session, q ternss
 		m.runCommand(sess, q.Command, false)
 	}
 	chip.ContextMenu(func(menu *ui.Menu) {
-		if menu.Item("运行").Chosen() {
+		if menu.Item(locales.CmdRun()).Chosen() {
 			m.runCommand(sess, q.Command, false)
 		}
-		if menu.Item("粘贴到终端（不运行）").Chosen() {
+		if menu.Item(locales.CmdPaste()).Chosen() {
 			m.runCommand(sess, q.Command, true)
 		}
-		if menu.Item("复制命令").Chosen() {
+		if menu.Item(locales.CmdCopyCommand()).Chosen() {
 			c.WriteClipboard(q.Command)
 		}
 		if editable {
 			menu.Separator()
-			if menu.Item("编辑…").Chosen() {
+			if menu.Item(locales.Edit()).Chosen() {
 				m.openCommandForm(s, &q)
 			}
-			if menu.Item("删除").Danger().Chosen() {
+			if menu.Item(locales.Delete()).Danger().Chosen() {
 				m.deleteCommand(s, q)
 			}
 		}
@@ -220,7 +224,7 @@ func (m *Model) commandChip(c *ui.Context, s *siteState, sess *session, q ternss
 // pasted for the user to finish and run.
 func (m *Model) runCommand(sess *session, command string, paste bool) {
 	if sess.status != sshconn.StatusReady {
-		m.notify("终端未连接，无法发送命令")
+		m.notify(locales.CmdNotConnected())
 		return
 	}
 	command = strings.ReplaceAll(command, "\r\n", "\n")
@@ -229,7 +233,7 @@ func (m *Model) runCommand(sess *session, command string, paste bool) {
 		text = strings.ReplaceAll(command, "\n", "\r") + "\r"
 	}
 	if !input(sess, text, paste) {
-		m.notify("终端未连接，无法发送命令")
+		m.notify(locales.CmdNotConnected())
 		return
 	}
 	sess.refocus = true
@@ -258,25 +262,25 @@ func (m *Model) commandDialog(c *ui.Context) {
 	if f.site == nil {
 		return
 	}
-	title := "添加快捷指令"
+	title := locales.CmdAdd()
 	if f.editing != "" {
-		title = "编辑快捷指令"
+		title = locales.CmdEditTitle()
 	}
-	where := "保存在本机"
+	where := locales.CmdSourceLocal()
 	if !f.site.home() {
-		where = "保存到站点「" + f.site.displayName() + "」，网页版的快捷指令里也会显示"
+		where = locales.CmdSaveToSite(f.site.displayName())
 	}
 	dialog(c, &m.commandFormOpen, 460, func() {
 		dialogTitle(c, title, where)
-		ui.Field(c, "名称", func() { ui.TextInput(c, &f.label).Placeholder("例如：查看磁盘").AutoFocus() })
-		ui.Field(c, "命令", func() {
+		ui.Field(c, locales.CmdName(), func() { ui.TextInput(c, &f.label).Placeholder(locales.CmdNamePlaceholder()).AutoFocus() })
+		ui.Field(c, locales.CmdCommand(), func() {
 			ui.Column(c).Gap(6).Children(func() {
 				ui.TextArea(c, &f.command).Lines(3, 8).Font("monospace").FontSize(12).Placeholder("df -h")
-				ui.Text(c, "点击即在当前终端运行；多行会逐行执行。").FontSize(11).TextColor(c.Theme().TextMuted)
+				ui.Text(c, locales.CmdHint()).FontSize(11).TextColor(c.Theme().TextMuted)
 			})
 		})
 		errorText(c, f.err)
-		dialogButtons(c, f.busy, "保存", func() { m.commandFormOpen = false }, m.saveCommand)
+		dialogButtons(c, f.busy, locales.Save(), func() { m.commandFormOpen = false }, m.saveCommand)
 	})
 }
 
@@ -289,10 +293,10 @@ func (m *Model) saveCommand() {
 	}
 	switch {
 	case q.Label == "":
-		f.err = "请填写名称"
+		f.err = locales.CmdNameRequired()
 		return
 	case q.Command == "":
-		f.err = "请填写命令"
+		f.err = locales.CmdCommandRequired()
 		return
 	}
 	if q.ID == "" {
@@ -326,18 +330,18 @@ func (m *Model) saveCommand() {
 }
 
 func (m *Model) deleteCommand(s *siteState, q ternssh.QuickCommand) {
-	message := "只删除本机保存的这条快捷指令。"
+	message := locales.CmdDeleteLocalMessage()
 	if !s.home() {
-		message = "会从站点「" + s.displayName() + "」上删除，网页版也不再显示。"
+		message = locales.CmdDeleteSiteMessage(s.displayName())
 	}
 	m.ask(confirmation{
-		title:   "删除快捷指令「" + q.Label + "」？",
+		title:   locales.CmdDeleteTitle(q.Label),
 		message: message,
-		action:  "删除",
+		action:  locales.Delete(),
 		do: func() {
 			if s.home() {
 				if err := m.store.DeleteQuickCommand(q.ID); err != nil {
-					m.notify("删除失败：" + err.Error())
+					m.notify(locales.CmdDeleteFailed(err.Error()))
 				}
 				m.loadCommands(s)
 				return
@@ -348,7 +352,7 @@ func (m *Model) deleteCommand(s *siteState, q ternssh.QuickCommand) {
 				cmds, err := s.client.DeleteQuickCommand(ctx, q.ID)
 				m.update(func() {
 					if err != nil {
-						m.notify("删除失败：" + err.Error())
+						m.notify(locales.CmdDeleteFailed(err.Error()))
 						return
 					}
 					s.commands = cmds

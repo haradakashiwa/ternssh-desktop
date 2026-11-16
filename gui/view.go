@@ -10,6 +10,7 @@ import (
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
 	"ternssh-desktop/internal/ternssh"
+	"ternssh-desktop/locales"
 )
 
 // View builds the window.
@@ -62,12 +63,12 @@ func (m *Model) titleBar(c *ui.Context) {
 				m.siteTab(c, i, s)
 			}
 		})
-		if iconButton(c, plusIcon, "添加站点").Clicked() {
+		if iconButton(c, plusIcon, locales.ViewAddSite()).Clicked() {
 			m.openSiteForm(nil)
 		}
 		ui.Spacer(c)
 		if s := m.current(); !s.home() {
-			b := iconButton(c, refreshIcon, "从站点刷新")
+			b := iconButton(c, refreshIcon, locales.ViewRefreshFromSite())
 			if s.loading {
 				b.Disabled(true)
 			}
@@ -75,7 +76,7 @@ func (m *Model) titleBar(c *ui.Context) {
 				m.refresh(s)
 			}
 		}
-		if iconButton(c, settingsIcon, "设置").Clicked() {
+		if iconButton(c, settingsIcon, locales.ViewSettings()).Clicked() {
 			m.OpenSettings()
 		}
 	})
@@ -103,26 +104,26 @@ func (m *Model) siteTab(c *ui.Context, i int, s *siteState) {
 		return
 	}
 	tab.ContextMenu(func(menu *ui.Menu) {
-		if menu.Item("编辑站点…").Chosen() {
+		if menu.Item(locales.ViewEditSite()).Chosen() {
 			site := s.site
 			m.openSiteForm(&site)
 		}
-		if menu.Item("刷新").Chosen() {
+		if menu.Item(locales.Refresh()).Chosen() {
 			m.refresh(s)
 		}
 		menu.Separator()
-		if menu.Item("向左移动").Disabled(i <= 1).Chosen() {
+		if menu.Item(locales.ViewMoveLeft()).Disabled(i <= 1).Chosen() {
 			m.moveSite(i, i-1)
 		}
-		if menu.Item("向右移动").Disabled(i == len(m.sites)-1).Chosen() {
+		if menu.Item(locales.ViewMoveRight()).Disabled(i == len(m.sites)-1).Chosen() {
 			m.moveSite(i, i+1)
 		}
 		menu.Separator()
-		if menu.Item("移除站点").Danger().Chosen() {
+		if menu.Item(locales.ViewRemoveSite()).Danger().Chosen() {
 			m.ask(confirmation{
-				title:   "移除站点「" + s.displayName() + "」？",
-				message: "会关闭它的终端，并删除本机保存的站点凭据。站点上的数据不受影响。",
-				action:  "移除",
+				title:   locales.ViewRemoveSiteTitle(s.displayName()),
+				message: locales.ViewRemoveSiteMessage(),
+				action:  locales.ViewRemove(),
 				do:      func() { m.removeSite(m.indexOf(s)) },
 			})
 		}
@@ -200,16 +201,20 @@ func (m *Model) sidebar(c *ui.Context, s *siteState) {
 		})
 
 		ui.Row(c).Gap(8).Children(func() {
-			b := sidebarButton(c).Grow(1).Gap(8).Label(map[bool]string{true: "添加服务器或终端", false: "添加服务器"}[s.home()])
+			addLabel := locales.ViewAddServer()
+			if s.home() {
+				addLabel = locales.ViewAddServerOrTerminal()
+			}
+			b := sidebarButton(c).Grow(1).Gap(8).Label(addLabel)
 			if b.Clicked() {
 				m.openServerForm(s)
 			}
 			b.Children(func() {
 				ui.Icon(c, plusIcon).Size(14, 14)
-				ui.Text(c, map[bool]string{true: "添加服务器或终端", false: "添加服务器"}[s.home()]).FontSize(13).FontWeight(500)
+				ui.Text(c, addLabel).FontSize(13).FontWeight(500)
 			})
 			m.foldButton(c, s)
-			g := sidebarButton(c).Width(38).Label("新建分组").Tooltip("新建分组")
+			g := sidebarButton(c).Width(38).Label(locales.ViewNewGroup()).Tooltip(locales.ViewNewGroup())
 			if g.Clicked() {
 				m.openGroupForm(s, "", "", "")
 			}
@@ -231,7 +236,11 @@ func sidebarButton(c *ui.Context) ui.Element {
 
 func (m *Model) siteServers(c *ui.Context, s *siteState) {
 	if len(s.tree) == 0 {
-		emptyHint(c, map[bool]string{true: "加载中…", false: "站点上还没有服务器，点击下方「添加服务器」"}[s.loading])
+		if s.loading {
+			emptyHint(c, locales.ViewLoading())
+		} else {
+			emptyHint(c, locales.ViewSiteEmpty())
+		}
 		return
 	}
 	m.nodes(c, s, s.tree, "", 0)
@@ -249,19 +258,19 @@ func (m *Model) nodes(c *ui.Context, s *siteState, nodes []ternssh.Node, parent 
 			key: "r:" + node.ID, name: node.Name, addr: node.Username + "@" + node.Host + portSuffix(node.Port),
 			depth: depth, drag: dragged{s, store.KindServer, node.ID}, parent: parent,
 		}, func() { m.openSynced(s, node) }, func(menu *ui.Menu) {
-			if menu.Item("编辑…").Chosen() {
+			if menu.Item(locales.Edit()).Chosen() {
 				m.editSynced(s, node)
 			}
-			if menu.Item("重置主机密钥").Disabled(m.store.SiteHostKey(s.site.ID, node.ID) == "").Chosen() {
+			if menu.Item(locales.ViewResetHostKey()).Disabled(m.store.SiteHostKey(s.site.ID, node.ID) == "").Chosen() {
 				m.store.SetSiteHostKey(s.site.ID, node.ID, "")
-				m.notify("已重置 " + node.Name + " 的主机密钥，下次连接时重新记录")
+				m.notify(locales.ViewHostKeyReset(node.Name))
 			}
 			menu.Separator()
-			if menu.Item("从站点删除").Danger().Chosen() {
+			if menu.Item(locales.ViewDeleteFromSite()).Danger().Chosen() {
 				m.ask(confirmation{
-					title:   "从站点删除「" + node.Name + "」？",
-					message: "服务器和它的凭据会从站点 " + s.displayName() + " 上删除，网页端也将看不到它。",
-					action:  "删除",
+					title:   locales.ViewDeleteFromSiteTitle(node.Name),
+					message: locales.ViewDeleteFromSiteMessage(s.displayName()),
+					action:  locales.Delete(),
 					do:      func() { m.deleteSynced(s, node) },
 				})
 			}
@@ -296,7 +305,7 @@ func (m *Model) serverRow(c *ui.Context, s *siteState, d serverRowData, open fun
 		open()
 	}
 	row.ContextMenu(func(mm *ui.Menu) {
-		if mm.Item("打开终端").Chosen() {
+		if mm.Item(locales.ViewOpenTerminal()).Chosen() {
 			open()
 		}
 		mm.Separator()
@@ -313,7 +322,7 @@ func (m *Model) serverRow(c *ui.Context, s *siteState, d serverRowData, open fun
 			ui.Text(c, d.addr).FontSize(11).TextColor(t.TextMuted).SingleLine()
 		})
 		if row.Hovered() || s.selected == d.key {
-			b := ui.ButtonBase(c).Size(24, 22).Radius(6).Center().Label("连接 " + d.name).Tooltip("打开终端")
+			b := ui.ButtonBase(c).Size(24, 22).Radius(6).Center().Label(locales.ViewConnectTo(d.name)).Tooltip(locales.ViewOpenTerminal())
 			if b.Hovered() {
 				b.Background(t.Accent).TextColor(t.AccentText)
 			} else {
@@ -339,7 +348,7 @@ func listLabel(c *ui.Context, text string) {
 // tab.
 func (m *Model) localServers(c *ui.Context, s *siteState) {
 	if len(s.local) == 0 && len(s.terminals) == 0 && len(s.groups) == 0 {
-		emptyHint(c, "还没有服务器或本地终端，点击下方「添加服务器或终端」")
+		emptyHint(c, locales.ViewHomeEmpty())
 		return
 	}
 	m.homeTree(c, s, "", 0)
@@ -371,15 +380,15 @@ func (m *Model) terminalRow(c *ui.Context, s *siteState, term store.Terminal, pa
 		key: "t:" + term.ID, name: term.Name, addr: displayDir(term.Dir), icon: terminalIcon, depth: depth,
 		drag: dragged{s, store.KindTerminal, term.ID}, parent: parent,
 	}, func() { m.openShell(s, term) }, func(menu *ui.Menu) {
-		if menu.Item("编辑…").Chosen() {
+		if menu.Item(locales.Edit()).Chosen() {
 			m.editTerminal(s, term)
 		}
 		menu.Separator()
-		if menu.Item("删除").Danger().Chosen() {
+		if menu.Item(locales.Delete()).Danger().Chosen() {
 			m.ask(confirmation{
-				title:   "删除终端「" + term.Name + "」？",
-				message: "只删除这一项，不影响本机上的文件。",
-				action:  "删除",
+				title:   locales.ViewDeleteTerminalTitle(term.Name),
+				message: locales.ViewDeleteTerminalMessage(),
+				action:  locales.Delete(),
 				do: func() {
 					m.store.DeleteTerminal(term.ID)
 					s.terminals = m.store.Terminals()
@@ -394,20 +403,20 @@ func (m *Model) localRow(c *ui.Context, s *siteState, srv store.Server, parent s
 		key: "l:" + srv.ID, name: srv.Name, addr: srv.Username + "@" + srv.Host + portSuffix(srv.Port), depth: depth,
 		drag: dragged{s, store.KindServer, srv.ID}, parent: parent,
 	}, func() { m.openLocal(s, srv) }, func(menu *ui.Menu) {
-		if menu.Item("编辑…").Chosen() {
+		if menu.Item(locales.Edit()).Chosen() {
 			m.editLocal(s, srv)
 		}
-		if menu.Item("重置主机密钥").Disabled(srv.HostKey == "").Chosen() {
+		if menu.Item(locales.ViewResetHostKey()).Disabled(srv.HostKey == "").Chosen() {
 			m.store.SetHostKey(srv.ID, "")
 			s.local = m.store.Servers()
-			m.notify("已重置 " + srv.Name + " 的主机密钥，下次连接时重新记录")
+			m.notify(locales.ViewHostKeyReset(srv.Name))
 		}
 		menu.Separator()
-		if menu.Item("删除").Danger().Chosen() {
+		if menu.Item(locales.Delete()).Danger().Chosen() {
 			m.ask(confirmation{
-				title:   "删除服务器「" + srv.Name + "」？",
-				message: "会删除本机保存的连接信息和凭据。",
-				action:  "删除",
+				title:   locales.ViewDeleteServerTitle(srv.Name),
+				message: locales.ViewDeleteServerMessage(),
+				action:  locales.Delete(),
 				do: func() {
 					m.store.DeleteServer(srv.ID)
 					s.local = m.store.Servers()
@@ -426,15 +435,15 @@ func (m *Model) workspace(c *ui.Context, s *siteState) {
 		if len(s.sessions) == 0 {
 			ui.Column(c).Grow(1).Center().Gap(10).Children(func() {
 				ui.Icon(c, terminalIcon).Size(40, 40).TextColor(t.TextMuted.Alpha(0.6))
-				ui.Text(c, "没有打开的终端").FontSize(16).Bold()
-				ui.Text(c, "双击左侧的服务器，或点它右侧的终端按钮打开终端").TextColor(t.TextMuted)
+				ui.Text(c, locales.ViewNoTerminals()).FontSize(16).Bold()
+				ui.Text(c, locales.ViewNoTerminalsHint()).TextColor(t.TextMuted)
 				if s.home() {
-					ui.Text(c, "按 "+newSessionLabel+" 打开本地终端").FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, locales.ViewLocalTerminalShortcut(newSessionLabel)).FontSize(12).TextColor(t.TextMuted)
 				} else {
-					ui.Text(c, "选中服务器后按 "+newSessionLabel+" 打开终端").FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, locales.ViewTerminalShortcut(newSessionLabel)).FontSize(12).TextColor(t.TextMuted)
 				}
 				if s.home() && len(m.sites) == 1 {
-					ui.Text(c, "要在多台设备间同步服务器，可以点击顶部的 + 添加 ternssh 站点").FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, locales.ViewSyncHint()).FontSize(12).TextColor(t.TextMuted)
 				}
 			})
 			return
@@ -489,10 +498,10 @@ func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 				}
 				i := i
 				tab.ContextMenu(func(menu *ui.Menu) {
-					if menu.Item("重新连接").Chosen() {
+					if menu.Item(locales.ViewReconnect()).Chosen() {
 						m.reconnect(s, i)
 					}
-					if menu.Item("关闭").Chosen() {
+					if menu.Item(locales.Close()).Chosen() {
 						closed = i
 					}
 				})
@@ -502,7 +511,7 @@ func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 					if i != s.current {
 						text.TextColor(t.TextMuted)
 					}
-					x := ui.ButtonBase(c).Size(18, 18).Radius(5).Center().Label("关闭 " + sess.title)
+					x := ui.ButtonBase(c).Size(18, 18).Radius(5).Center().Label(locales.ViewCloseTab(sess.title))
 					if x.Hovered() {
 						x.Background(hover(c))
 					}
@@ -515,7 +524,7 @@ func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 			if closed >= 0 {
 				m.closeSession(s, closed)
 			}
-			if iconButton(c, plusIcon, "新建会话").Tooltip("新建会话 (" + newSessionLabel + ")").Clicked() {
+			if iconButton(c, plusIcon, locales.ViewNewSession()).Tooltip(locales.ViewNewSessionTooltip(newSessionLabel)).Clicked() {
 				m.newSession()
 			}
 		})
@@ -540,16 +549,19 @@ func (m *Model) statusBar(c *ui.Context, s *siteState, sess *session) {
 		dot(c, sessionColor(sess.status))
 		status := sess.status.String()
 		if sess.mode == Shell {
-			status = map[bool]string{true: "运行中", false: "已退出"}[sess.status == sshconn.StatusReady]
+			status = locales.ViewShellExited()
+			if sess.status == sshconn.StatusReady {
+				status = locales.ViewShellRunning()
+			}
 		}
 		ui.Text(c, status).FontSize(11).TextColor(t.TextMuted)
 		ui.Text(c, "·").FontSize(11).TextColor(t.TextMuted)
-		via := "本机直连"
+		via := locales.ViewViaDirect()
 		switch sess.mode {
 		case Synced:
-			via += " · 凭据来自 " + hostOf(s.site.URL)
+			via = locales.ViewViaSite(hostOf(s.site.URL))
 		case Shell:
-			via = "本地终端"
+			via = locales.ViewViaLocal()
 			if sess.term != nil {
 				if d := sess.term.Dir(); d != "" {
 					sess.dir = d
@@ -561,11 +573,19 @@ func (m *Model) statusBar(c *ui.Context, s *siteState, sess *session) {
 			ui.Text(c, sess.dir).FontSize(11).TextColor(t.TextMuted).SingleLine().Shrink(1).MinWidth(0)
 		}
 		if sess.status == sshconn.StatusError || sess.status == sshconn.StatusClosed {
-			if ui.Button(c, map[bool]string{true: "重新打开", false: "重新连接"}[sess.mode == Shell]).FontSize(11).Padding(2, 10).Clicked() {
+			if ui.Button(c, reconnectLabel(sess)).FontSize(11).Padding(2, 10).Clicked() {
 				m.reconnect(s, s.current)
 			}
 		}
 	})
+}
+
+// reconnectLabel is the label of the button that opens a session again.
+func reconnectLabel(sess *session) string {
+	if sess.mode == Shell {
+		return locales.ViewReopen()
+	}
+	return locales.ViewReconnect()
 }
 
 // toastView shows the last notice for a few seconds.
@@ -597,10 +617,10 @@ func (m *Model) deleteSynced(s *siteState, node ternssh.Node) {
 		err := client.DeleteServer(ctx, node.ID)
 		m.update(func() {
 			if err != nil {
-				m.notify("删除失败: " + err.Error())
+				m.notify(locales.ViewDeleteFailed(err.Error()))
 				return
 			}
-			m.notify("已从站点删除 " + node.Name)
+			m.notify(locales.ViewDeletedFromSite(node.Name))
 			m.refresh(s)
 		})
 	}()

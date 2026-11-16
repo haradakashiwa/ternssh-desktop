@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"ternssh-desktop/locales"
 )
 
 // AuthKind is how a site authenticates.
@@ -319,7 +321,7 @@ func (s *Store) SetSiteHostKey(siteID, serverID, fingerprint string) error {
 func (s *Store) ServerCredential(id string) (Credential, error) {
 	var cred Credential
 	if s.secrets == nil {
-		return cred, errors.New("没有可用的凭据存储")
+		return cred, errors.New(locales.StoreNoCredentialStore())
 	}
 	b, err := s.secrets.Get("server." + id)
 	if err != nil {

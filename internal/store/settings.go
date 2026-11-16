@@ -8,6 +8,9 @@ type Settings struct {
 	// QuitOnClose quits the app as its window closes, instead of keeping
 	// it in the menu bar or notification area.
 	QuitOnClose bool `json:"quitOnClose,omitempty"`
+	// Language is the language the app shows, as "en" or "zh-Hans";
+	// empty to follow the system's.
+	Language string `json:"language,omitempty"`
 }
 
 // Settings returns the app's preferences.

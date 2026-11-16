@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo/ui"
+
+	"ternssh-desktop/locales"
 )
 
 // settingsForm is the state of the settings dialog.
@@ -13,23 +15,40 @@ type settingsForm struct {
 	recording   bool // waiting for the keys of the hotkey
 	err         string
 	closeAction int // 0 keeps the app in the tray, 1 quits
+	language    int // of languages
+}
+
+// languages are the languages the app is written in, by tag: "" follows
+// the system's.
+var languages = []string{"", "en", "zh-Hans"}
+
+// languageLabels name the languages, each in itself but the system's.
+func languageLabels() []string {
+	return []string{locales.SettingsLanguageSystem(), "English", "简体中文"}
 }
 
 // OpenSettings shows the settings dialog.
 func (m *Model) OpenSettings() {
 	m.settings = settingsForm{}
-	if m.store.Settings().QuitOnClose {
+	st := m.store.Settings()
+	if st.QuitOnClose {
 		m.settings.closeAction = 1
+	}
+	for i, tag := range languages {
+		if tag == st.Language {
+			m.settings.language = i
+		}
 	}
 	m.settingsOpen = true
 }
 
-// trayName is what the system calls the place of the app's icon.
-func trayName() string {
+// minimizeLabel is the choice of keeping the app in the place the system
+// keeps the app's icon.
+func minimizeLabel() string {
 	if runtime.GOOS == "darwin" {
-		return "菜单栏"
+		return locales.SettingsMinimizeToMenuBar()
 	}
-	return "托盘"
+	return locales.SettingsMinimizeToTray()
 }
 
 func (m *Model) settingsDialog(c *ui.Context) {
@@ -41,26 +60,33 @@ func (m *Model) settingsDialog(c *ui.Context) {
 		return
 	}
 	dialog(c, &m.settingsOpen, 460, func() {
-		dialogTitle(c, "设置", "")
-		ui.Field(c, "快速唤出", func() {
+		dialogTitle(c, locales.SettingsTitle(), "")
+		ui.Field(c, locales.SettingsHotkey(), func() {
 			ui.Column(c).Gap(6).Children(func() {
 				m.hotkeyField(c)
-				ui.Text(c, "在任何应用中按下这个快捷键，显示或隐藏 ternssh 窗口。").
+				ui.Text(c, locales.SettingsHotkeyHint()).
 					FontSize(11).TextColor(c.Theme().TextMuted)
 				errorText(c, f.err)
 			})
 		})
-		ui.Field(c, "关闭窗口时", func() {
-			ui.Segmented(c, &f.closeAction, "最小化到"+trayName(), "退出应用").Label("关闭窗口时")
+		ui.Field(c, locales.SettingsOnClose(), func() {
+			ui.Segmented(c, &f.closeAction, minimizeLabel(), locales.SettingsQuitApp()).Label(locales.SettingsOnClose())
 		})
-		if st := m.store.Settings(); st.QuitOnClose != (f.closeAction == 1) {
-			st.QuitOnClose = f.closeAction == 1
+		ui.Field(c, locales.SettingsLanguage(), func() {
+			ui.Segmented(c, &f.language, languageLabels()...).Label(locales.SettingsLanguage())
+		})
+		if st := m.store.Settings(); st.QuitOnClose != (f.closeAction == 1) || st.Language != languages[f.language] {
+			changed := st.Language != languages[f.language]
+			st.QuitOnClose, st.Language = f.closeAction == 1, languages[f.language]
 			if err := m.store.SetSettings(st); err != nil {
-				f.err = "保存失败：" + err.Error()
+				f.err = locales.SettingsErrSave(err.Error())
+			}
+			if changed && m.backend.SetLanguage != nil {
+				m.backend.SetLanguage(st.Language)
 			}
 		}
 		ui.Row(c).Justify(ui.End).Children(func() {
-			if ui.PrimaryButton(c, "完成").Clicked() {
+			if ui.PrimaryButton(c, locales.Done()).Clicked() {
 				m.settingsOpen = false
 				m.stopRecording()
 			}
@@ -75,7 +101,7 @@ func (m *Model) hotkeyField(c *ui.Context) {
 	hotkey := m.store.Settings().Hotkey
 	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 		box := ui.ButtonBase(c).Grow(1).Height(30).Padding(0, 10).Radius(t.Radius).
-			AlignItems(ui.Center).Label("快速唤出快捷键").Background(t.Surface).Border(1, t.Border)
+			AlignItems(ui.Center).Label(locales.HotkeyFieldLabel()).Background(t.Surface).Border(1, t.Border)
 		if f.recording {
 			box.Border(1, t.Accent).Focus().HandleInput(m.recordKey)
 		} else if box.Clicked() {
@@ -84,20 +110,20 @@ func (m *Model) hotkeyField(c *ui.Context) {
 		box.Children(func() {
 			switch {
 			case f.recording:
-				ui.Text(c, "请按下快捷键…").TextColor(accentInk(c))
+				ui.Text(c, locales.HotkeyRecording()).TextColor(accentInk(c))
 			case hotkey == "":
-				ui.Text(c, "未设置").TextColor(t.TextMuted)
+				ui.Text(c, locales.HotkeyNotSet()).TextColor(t.TextMuted)
 			default:
 				ui.Text(c, hotkeyLabel(hotkey)).Bold()
 			}
 		})
 		switch {
 		case f.recording:
-			if ui.Button(c, "取消").Clicked() {
+			if ui.Button(c, locales.Cancel()).Clicked() {
 				m.stopRecording()
 			}
 		case hotkey != "":
-			if ui.Button(c, "清除").Clicked() {
+			if ui.Button(c, locales.HotkeyClear()).Clicked() {
 				m.setHotkey("")
 			}
 		}
@@ -152,7 +178,7 @@ func (m *Model) recordKey(ev ui.InputEvent) bool {
 		return true // a modifier on its own, or a key with no name
 	}
 	if ev.Mods&^ui.Shift == 0 && !strings.HasPrefix(name, "F") {
-		m.settings.err = "快捷键需要包含 " + modifierHint() + " 之一"
+		m.settings.err = locales.HotkeyErrModifier(modifierHint())
 		return true
 	}
 	m.settings.recording = false
@@ -165,14 +191,14 @@ func (m *Model) setHotkey(acc string) {
 	f := &m.settings
 	st := m.store.Settings()
 	if err := m.registerHotkey(acc); err != nil {
-		f.err = "无法使用 " + hotkeyLabel(acc) + "，它可能已被系统或其他应用占用（" + err.Error() + "）"
+		f.err = locales.HotkeyErrInUse(hotkeyLabel(acc), err.Error())
 		m.registerHotkey(st.Hotkey)
 		return
 	}
 	f.err = ""
 	st.Hotkey = acc
 	if err := m.store.SetSettings(st); err != nil {
-		f.err = "保存失败：" + err.Error()
+		f.err = locales.SettingsErrSave(err.Error())
 	}
 }
 
@@ -187,7 +213,7 @@ func (m *Model) registerHotkey(acc string) error {
 func (m *Model) startHotkey() {
 	if acc := m.store.Settings().Hotkey; acc != "" {
 		if err := m.registerHotkey(acc); err != nil {
-			m.notify("快速唤出快捷键 " + hotkeyLabel(acc) + " 无法注册：" + err.Error())
+			m.notify(locales.HotkeyErrRegister(hotkeyLabel(acc), err.Error()))
 		}
 	}
 }
@@ -251,9 +277,9 @@ func hotkeyLabel(acc string) string {
 
 func modifierHint() string {
 	if runtime.GOOS == "darwin" {
-		return "⌘、⌥、⌃"
+		return locales.HotkeyModifiersMac()
 	}
-	return "Ctrl、Alt、Win"
+	return locales.HotkeyModifiersOther()
 }
 
 // keyName is a key's name in an accelerator, "" for one it has none for.

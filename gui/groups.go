@@ -8,6 +8,7 @@ import (
 
 	"ternssh-desktop/internal/store"
 	"ternssh-desktop/internal/ternssh"
+	"ternssh-desktop/locales"
 )
 
 // dragged is a row of the sidebar being dragged: a group, a server or a
@@ -74,9 +75,9 @@ func (m *Model) foldButton(c *ui.Context, s *siteState) {
 	if len(s.groupIDs()) == 0 {
 		return
 	}
-	svg, label := collapseIcon, "全部收起"
+	svg, label := collapseIcon, locales.GroupCollapseAll()
 	if !s.allOpen() {
-		svg, label = expandIcon, "全部展开"
+		svg, label = expandIcon, locales.GroupExpandAll()
 	}
 	b := sidebarButton(c).Width(38).Label(label).Tooltip(label)
 	if b.Clicked() {
@@ -100,25 +101,25 @@ func (m *Model) groupBlock(c *ui.Context, s *siteState, id, name, parent string,
 		}
 		m.dropOn(c, s, row, dragged{s, store.KindGroup, id}, parent)
 		row.ContextMenu(func(menu *ui.Menu) {
-			if menu.Item("全部展开").Chosen() {
+			if menu.Item(locales.GroupExpandAll()).Chosen() {
 				s.setAllOpen(true)
 			}
-			if menu.Item("全部收起").Chosen() {
+			if menu.Item(locales.GroupCollapseAll()).Chosen() {
 				s.setAllOpen(false)
 			}
 			menu.Separator()
-			if menu.Item("新建子分组…").Chosen() {
+			if menu.Item(locales.GroupNewSubgroup()).Chosen() {
 				m.openGroupForm(s, "", id, "")
 			}
-			if menu.Item("重命名…").Chosen() {
+			if menu.Item(locales.GroupRenameMenu()).Chosen() {
 				m.openGroupForm(s, id, "", name)
 			}
 			menu.Separator()
-			if menu.Item("删除分组").Danger().Chosen() {
+			if menu.Item(locales.GroupDelete()).Danger().Chosen() {
 				m.ask(confirmation{
-					title:   "删除分组「" + name + "」？",
-					message: "它的子分组会一起删除，其中的服务器和终端移到顶层，不会被删除。",
-					action:  "删除",
+					title:   locales.GroupDeleteConfirmTitle(name),
+					message: locales.GroupDeleteConfirmMessage(),
+					action:  locales.Delete(),
 					do:      func() { m.deleteGroup(s, id, name) },
 				})
 			}
@@ -286,7 +287,7 @@ func (m *Model) moveTo(s *siteState, d dragged, to string, index int) {
 	}
 	if s.home() {
 		if err := m.store.Move(d.kind, d.id, to, index); err != nil {
-			m.notify("无法移动: " + err.Error())
+			m.notify(locales.GroupErrMove(err.Error()))
 		}
 		m.refresh(s)
 		return
@@ -302,7 +303,7 @@ func (m *Model) moveTo(s *siteState, d dragged, to string, index int) {
 		tree, err := client.Move(ctx, typeOf(d.kind), d.id, parent, index)
 		m.update(func() {
 			if err != nil {
-				m.notify("移动失败: " + err.Error())
+				m.notify(locales.GroupMoveFailed(err.Error()))
 				return
 			}
 			s.tree = tree
@@ -383,16 +384,24 @@ func (m *Model) groupDialog(c *ui.Context) {
 		return
 	}
 	dialog(c, &m.groupFormOpen, 380, func() {
-		where := "保存在本机"
+		where := locales.DialogSavedLocally()
 		if !f.site.home() {
-			where = "保存到站点「" + f.site.displayName() + "」"
+			where = locales.DialogSavedToSite(f.site.displayName())
 		}
-		dialogTitle(c, map[bool]string{true: "新建分组", false: "重命名分组"}[f.editing == ""], where)
+		title := locales.GroupRenameTitle()
+		if f.editing == "" {
+			title = locales.GroupNewTitle()
+		}
+		dialogTitle(c, title, where)
 		ui.Form(c, func() {
-			ui.Field(c, "名称", func() { ui.TextInput(c, &f.name).Placeholder("例如：生产环境").AutoFocus() })
+			ui.Field(c, locales.DialogFieldName(), func() { ui.TextInput(c, &f.name).Placeholder(locales.GroupNamePlaceholder()).AutoFocus() })
 		})
 		errorText(c, f.err)
-		dialogButtons(c, f.busy, map[bool]string{true: "新建", false: "保存"}[f.editing == ""],
+		primary := locales.Save()
+		if f.editing == "" {
+			primary = locales.GroupCreate()
+		}
+		dialogButtons(c, f.busy, primary,
 			func() { m.groupFormOpen = false }, m.saveGroup)
 	})
 }
@@ -402,7 +411,7 @@ func (m *Model) saveGroup() {
 	s := f.site
 	name := strings.TrimSpace(f.name)
 	if name == "" {
-		f.err = "请输入名称"
+		f.err = locales.DialogErrName()
 		return
 	}
 	if s.home() {
@@ -411,7 +420,7 @@ func (m *Model) saveGroup() {
 			g.ID = store.NewID()
 		}
 		if err := m.store.PutGroup(g); err != nil {
-			f.err = "无法保存: " + err.Error()
+			f.err = locales.DialogErrSave(err.Error())
 			return
 		}
 		if f.parent != "" {
@@ -452,7 +461,7 @@ func (m *Model) saveGroup() {
 func (m *Model) deleteGroup(s *siteState, id, name string) {
 	if s.home() {
 		if err := m.store.DeleteGroup(id); err != nil {
-			m.notify("删除失败: " + err.Error())
+			m.notify(locales.GroupDeleteFailed(err.Error()))
 		}
 		m.refresh(s)
 		return
@@ -464,10 +473,10 @@ func (m *Model) deleteGroup(s *siteState, id, name string) {
 		err := client.DeleteGroup(ctx, id)
 		m.update(func() {
 			if err != nil {
-				m.notify("删除失败: " + err.Error())
+				m.notify(locales.GroupDeleteFailed(err.Error()))
 				return
 			}
-			m.notify("已删除分组 " + name)
+			m.notify(locales.GroupDeleted(name))
 			m.refresh(s)
 		})
 	}()

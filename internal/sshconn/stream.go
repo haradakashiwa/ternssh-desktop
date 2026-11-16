@@ -6,10 +6,11 @@ package sshconn
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
+
+	"ternssh-desktop/locales"
 )
 
 // Status is how far a connection got.
@@ -25,13 +26,13 @@ const (
 func (s Status) String() string {
 	switch s {
 	case StatusConnecting:
-		return "连接中"
+		return locales.SshStatusConnecting()
 	case StatusReady:
-		return "已连接"
+		return locales.SshStatusConnected()
 	case StatusError:
-		return "连接失败"
+		return locales.SshStatusFailed()
 	default:
-		return "已断开"
+		return locales.SshStatusDisconnected()
 	}
 }
 
@@ -106,9 +107,15 @@ func (s *stream) output(p []byte) {
 }
 
 // notice writes a line of the connection's own to the terminal, dimmed.
-func (s *stream) notice(format string, args ...any) {
-	s.output([]byte("\x1b[2m" + fmt.Sprintf(format, args...) + "\x1b[0m\r\n"))
+func (s *stream) notice(text string) {
+	s.output([]byte("\x1b[2m" + text + "\x1b[0m\r\n"))
 }
+
+// msgError is an error whose message is said in the language the app
+// shows as it is asked for, so that a sentinel error keeps its identity.
+type msgError struct{ msg func() string }
+
+func (e *msgError) Error() string { return e.msg() }
 
 func (s *stream) ready() {
 	s.status(StatusReady, "")
@@ -136,7 +143,7 @@ func (s *stream) end() {
 	if s.Status() == StatusError || s.Status() == StatusClosed {
 		return
 	}
-	s.output([]byte("\r\n\x1b[2m连接已关闭\x1b[0m\r\n"))
+	s.output([]byte("\r\n\x1b[2m" + locales.SshConnectionClosed() + "\x1b[0m\r\n"))
 	s.status(StatusClosed, "")
 	s.finish()
 }

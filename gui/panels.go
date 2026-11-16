@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"ternssh-desktop/internal/sshconn"
+	"ternssh-desktop/locales"
 )
 
 // An SSH session's terminal shows its server's files over SFTP below it
@@ -102,9 +103,9 @@ func (m *Model) panelButtons(c *ui.Context, sess *session) {
 		svg   *ui.SVG
 		label string
 	}
-	buttons := []button{{&sess.showBottom, panelBottomIcon, "文件与快捷指令"}}
+	buttons := []button{{&sess.showBottom, panelBottomIcon, locales.FilesPanelToggle()}}
 	if sess.hasPanels() {
-		buttons = []button{{&sess.showBottom, panelBottomIcon, "文件与快捷指令"}, {&sess.showStatus, activityIcon, "服务器状态"}}
+		buttons = []button{{&sess.showBottom, panelBottomIcon, locales.FilesPanelToggle()}, {&sess.showStatus, activityIcon, locales.StatsTitle()}}
 	}
 	for _, b := range buttons {
 		btn := ui.ButtonBase(c).Size(28, 26).Radius(7).Center().Label(b.label).Tooltip(b.label)
@@ -185,7 +186,7 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 		}
 		client := sshClient(sess)
 		if client == nil {
-			panelHint(c, "连接成功后可以浏览服务器上的文件")
+			panelHint(c, locales.FilesHintConnect())
 			return
 		}
 		if !f.opening {
@@ -213,23 +214,23 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 
 	// The path, which takes another to go to.
 	ui.Row(c).Padding(8, 8, 6, 8).Gap(4).AlignItems(ui.Center).Children(func() {
-		up := iconButton(c, upIcon, "上级目录").Disabled(f.fs.Dir(f.dir) == f.dir)
+		up := iconButton(c, upIcon, locales.FilesParentFolder()).Disabled(f.fs.Dir(f.dir) == f.dir)
 		if up.Clicked() {
 			m.listDir(f, f.fs.Dir(f.dir))
 		}
-		in := ui.TextInput(c, &f.pathInput).Grow(1).MinWidth(0).FontSize(12).Label("路径")
+		in := ui.TextInput(c, &f.pathInput).Grow(1).MinWidth(0).FontSize(12).Label(locales.FilesPath())
 		if in.Submitted() {
 			m.listDir(f, strings.TrimSpace(f.pathInput))
 		}
-		if iconButton(c, refreshIcon, "刷新").Clicked() {
+		if iconButton(c, refreshIcon, locales.Refresh()).Clicked() {
 			m.listDir(f, f.dir)
 		}
-		if iconButton(c, folderPlusIcon, "新建文件夹").Clicked() {
-			m.openPrompt("新建文件夹", "名称", "", "新建", func(name string) {
+		if iconButton(c, folderPlusIcon, locales.FilesNewFolder()).Clicked() {
+			m.openPrompt(locales.FilesNewFolder(), locales.FilesName(), "", locales.FilesCreate(), func(name string) {
 				m.fileOp(f, func() error { return f.fs.Mkdir(f.fs.Join(f.dir, name)) })
 			})
 		}
-		if m.backend.PickFiles != nil && iconButton(c, uploadIcon, map[bool]string{false: "上传文件", true: "复制文件到这里"}[f.local]).Clicked() {
+		if m.backend.PickFiles != nil && iconButton(c, uploadIcon, map[bool]string{false: locales.FilesUpload(), true: locales.FilesCopyHere()}[f.local]).Clicked() {
 			pick := m.backend.PickFiles
 			go func() {
 				paths, err := pick()
@@ -254,24 +255,24 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 				p := f.fs.Join(f.dir, e.Name)
 				switch {
 				case e.Dir:
-					if menu.Item("打开").Chosen() {
+					if menu.Item(locales.FilesOpen()).Chosen() {
 						m.listDir(f, p)
 					}
 				case f.local:
-					if menu.Item("编辑").Chosen() {
+					if menu.Item(locales.FilesEdit()).Chosen() {
 						m.openEditor(sess, f, p)
 					}
-					if m.backend.OpenPath != nil && menu.Item("用默认应用打开").Chosen() {
+					if m.backend.OpenPath != nil && menu.Item(locales.FilesOpenWithDefault()).Chosen() {
 						m.openLocalFile(p)
 					}
 				default:
-					if menu.Item("编辑").Chosen() {
+					if menu.Item(locales.FilesEdit()).Chosen() {
 						m.openEditor(sess, f, p)
 					}
-					if menu.Item("下载").Chosen() {
+					if menu.Item(locales.FilesDownload()).Chosen() {
 						m.download(f, p, "")
 					}
-					if m.backend.SaveFile != nil && menu.Item("下载到…").Chosen() {
+					if m.backend.SaveFile != nil && menu.Item(locales.FilesDownloadTo()).Chosen() {
 						save := m.backend.SaveFile
 						go func() {
 							dest, err := save(e.Name)
@@ -284,26 +285,36 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 				if f.local && m.backend.ShowInFolder != nil && menu.Item(showInFolderLabel()).Chosen() {
 					m.backend.ShowInFolder(p)
 				}
-				if menu.Item("复制路径").Chosen() {
+				if menu.Item(locales.FilesCopyPath()).Chosen() {
 					c.WriteClipboard(p)
 				}
 				menu.Separator()
-				if menu.Item("重命名…").Chosen() {
-					m.openPrompt("重命名", "名称", e.Name, "重命名", func(name string) {
+				if menu.Item(locales.FilesRenameMenu()).Chosen() {
+					m.openPrompt(locales.Rename(), locales.FilesName(), e.Name, locales.Rename(), func(name string) {
 						m.fileOp(f, func() error { return f.fs.Rename(p, f.fs.Join(f.dir, name)) })
 					})
 				}
-				if menu.Item("删除").Danger().Chosen() {
-					what := map[bool]string{true: "文件夹和其中的所有内容", false: "文件"}[e.Dir]
+				if menu.Item(locales.Delete()).Danger().Chosen() {
+					var message string
+					switch {
+					case f.local && e.Dir:
+						message = locales.FilesDeleteLocalFolder()
+					case f.local:
+						message = locales.FilesDeleteLocalFile()
+					case e.Dir:
+						message = locales.FilesDeleteRemoteFolder()
+					default:
+						message = locales.FilesDeleteRemoteFile()
+					}
 					m.ask(confirmation{
-						title:   "删除「" + e.Name + "」？",
-						message: map[bool]string{false: "会从服务器上删除这个", true: "会从本机删除这个"}[f.local] + what + "，无法恢复。",
-						action:  "删除",
+						title:   locales.FilesDeleteTitle(e.Name),
+						message: message,
+						action:  locales.Delete(),
 						do:      func() { m.fileOp(f, func() error { return f.fs.Remove(p) }) },
 					})
 				}
 			}
-			cols := []ui.TableColumn{{Title: "名称"}, {Title: "大小", Width: 70, Align: ui.End}, {Title: "修改时间", Width: 96}}
+			cols := []ui.TableColumn{{Title: locales.FilesName()}, {Title: locales.FilesColumnSize(), Width: 70, Align: ui.End}, {Title: locales.FilesColumnModified(), Width: 96}}
 			table := ui.Table(c, &f.list, cols, len(f.entries), func(row, col int) {
 				e := f.entries[row]
 				switch col {
@@ -323,7 +334,7 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 				case 2:
 					ui.Text(c, formatTime(e.ModTime())).FontSize(11).TextColor(t.TextMuted).SingleLine()
 				}
-			}).Grow(1).MinHeight(0).Label("文件")
+			}).Grow(1).MinHeight(0).Label(locales.FilesTable())
 			if table.Submitted() && f.selected >= 0 && f.selected < len(f.entries) {
 				e := f.entries[f.selected]
 				p := f.fs.Join(f.dir, e.Name)
@@ -340,10 +351,10 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 			if f.loading {
 				ui.Row(c).Padding(4, 10).Gap(6).AlignItems(ui.Center).Children(func() {
 					ui.Spinner(c).Size(12, 12)
-					ui.Text(c, "正在读取…").FontSize(11).TextColor(t.TextMuted)
+					ui.Text(c, locales.FilesLoading()).FontSize(11).TextColor(t.TextMuted)
 				})
 			} else if len(f.entries) == 0 && f.err == "" {
-				ui.Text(c, map[bool]string{false: "空文件夹 · 把文件拖到这里上传", true: "空文件夹 · 把文件拖到这里复制"}[f.local]).FontSize(11).TextColor(t.TextMuted).Padding(4, 10)
+				ui.Text(c, map[bool]string{false: locales.FilesEmptyUpload(), true: locales.FilesEmptyCopy()}[f.local]).FontSize(11).TextColor(t.TextMuted).Padding(4, 10)
 			}
 		})
 		m.transfers(c, f)
@@ -362,7 +373,7 @@ func (m *Model) listDir(f *filesState, dir string) {
 		m.update(func() {
 			f.loading = false
 			if err != nil {
-				f.err = "无法打开 " + dir + ": " + err.Error()
+				f.err = locales.FilesCantOpen(dir, err.Error())
 				f.pathInput = f.dir
 				return
 			}
@@ -409,9 +420,9 @@ func (m *Model) promptDialog(c *ui.Context) {
 			name := strings.TrimSpace(q.value)
 			switch {
 			case name == "" || name == "." || name == "..":
-				q.err = "请输入名称"
+				q.err = locales.FilesNameRequired()
 			case strings.Contains(name, "/"):
-				q.err = "名称不能包含 /"
+				q.err = locales.FilesNameSlash()
 			default:
 				m.promptOpen = false
 				q.do(name)
@@ -472,7 +483,7 @@ func (m *Model) download(f *filesState, remote, dest string) {
 				tr.err = err.Error()
 				return
 			}
-			m.notify("已下载到 " + displayPath(dest))
+			m.notify(locales.FilesDownloaded(displayPath(dest)))
 		})
 	}()
 }
@@ -483,18 +494,18 @@ func (m *Model) openLocalFile(p string) {
 		return
 	}
 	if err := m.backend.OpenPath(p); err != nil {
-		m.notify("无法打开 " + displayPath(p) + ": " + err.Error())
+		m.notify(locales.FilesCantOpen(displayPath(p), err.Error()))
 	}
 }
 
 func showInFolderLabel() string {
 	switch runtime.GOOS {
 	case "darwin":
-		return "在访达中显示"
+		return locales.FilesShowInFinder()
 	case "windows":
-		return "在资源管理器中显示"
+		return locales.FilesShowInExplorer()
 	}
-	return "在文件管理器中显示"
+	return locales.FilesShowInFileManager()
 }
 
 // downloadPath is where a file named name downloads: in the Downloads
@@ -532,9 +543,9 @@ func (m *Model) transfers(c *ui.Context, f *filesState) {
 	ui.Box(c).Width(1).Background(hairline(c)).Shrink(0)
 	ui.Column(c).Width(230).Padding(8, 10).Gap(6).Shrink(0).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, "传输").FontSize(11).Bold().TextColor(t.TextMuted).Grow(1)
-			if ui.ButtonBase(c).Label("清除已完成").Children(func() {
-				ui.Text(c, "清除已完成").FontSize(11).TextColor(accentInk(c))
+			ui.Text(c, locales.FilesTransfers()).FontSize(11).Bold().TextColor(t.TextMuted).Grow(1)
+			if ui.ButtonBase(c).Label(locales.FilesClearFinished()).Children(func() {
+				ui.Text(c, locales.FilesClearFinished()).FontSize(11).TextColor(accentInk(c))
 			}).Clicked() {
 				var left []*transfer
 				for _, tr := range f.transfers {
@@ -559,13 +570,13 @@ func (m *Model) transfers(c *ui.Context, f *filesState) {
 					var status string
 					switch {
 					case tr.err != "":
-						status = "失败"
+						status = locales.FilesTransferFailed()
 					case tr.finished:
-						status = "完成"
+						status = locales.Done()
 					case total > 0:
 						status = fmt.Sprintf("%d%%", done*100/total)
 					default:
-						status = "等待"
+						status = locales.FilesTransferWaiting()
 					}
 					st := ui.Text(c, status).FontSize(11).TextColor(t.TextMuted)
 					if tr.err != "" {
@@ -591,7 +602,7 @@ func (m *Model) statusPanel(c *ui.Context, sess *session) {
 	if sess.stats == nil {
 		client := sshClient(sess)
 		if client == nil {
-			panelHint(c, "连接成功后显示服务器状态")
+			panelHint(c, locales.StatsHintConnect())
 			return
 		}
 		sess.stats = sshconn.StartMonitor(client, 2*time.Second, func() { m.update(func() {}) })
@@ -604,7 +615,7 @@ func (m *Model) statusPanel(c *ui.Context, sess *session) {
 		}
 		ui.Column(c).Grow(1).Center().Gap(8).Children(func() {
 			ui.Spinner(c)
-			ui.Text(c, "正在读取服务器状态…").FontSize(11).TextColor(t.TextMuted)
+			ui.Text(c, locales.StatsLoading()).FontSize(11).TextColor(t.TextMuted)
 		})
 		return
 	}
@@ -614,24 +625,24 @@ func (m *Model) statusPanel(c *ui.Context, sess *session) {
 			ui.Column(c).Gap(3).Children(func() {
 				ui.Row(c).AlignItems(ui.Center).Children(func() {
 					ui.Text(c, st.Host).FontSize(14).Bold().SingleLine().Grow(1).MinWidth(0)
-					ui.Text(c, "运行 "+formatUptime(st.Uptime)).FontSize(11).TextColor(t.TextMuted)
+					ui.Text(c, locales.StatsUptime(formatUptime(st.Uptime))).FontSize(11).TextColor(t.TextMuted)
 				})
-				ui.Textf(c, "%d 核 · 负载 %.2f  %.2f  %.2f", st.Cores, st.Load[0], st.Load[1], st.Load[2]).
+				ui.Text(c, locales.StatsCoresLoad(st.Cores, fmt.Sprintf("%.2f  %.2f  %.2f", st.Load[0], st.Load[1], st.Load[2]))).
 					FontSize(11).TextColor(t.TextMuted)
 				if err := sess.stats.Err(); err != nil {
-					ui.Text(c, "最近一次读取失败: "+err.Error()).FontSize(11).TextColor(t.Danger).MaxLines(2)
+					ui.Text(c, locales.StatsReadFailed(err.Error())).FontSize(11).TextColor(t.Danger).MaxLines(2)
 				}
 			})
 			usage(c, "CPU", fmt.Sprintf("%.0f%%", st.CPU*100), st.CPU)
 			ui.Column(c).Gap(4).Children(func() {
-				usage(c, "内存", formatBytes(st.MemUsed)+" / "+formatBytes(st.MemTotal), share(st.MemUsed, st.MemTotal))
+				usage(c, locales.StatsMemory(), formatBytes(st.MemUsed)+" / "+formatBytes(st.MemTotal), share(st.MemUsed, st.MemTotal))
 				if st.SwapTotal > 0 {
-					ui.Text(c, "交换 "+formatBytes(st.SwapUsed)+" / "+formatBytes(st.SwapTotal)).FontSize(11).TextColor(t.TextMuted)
+					ui.Text(c, locales.StatsSwap(formatBytes(st.SwapUsed), formatBytes(st.SwapTotal))).FontSize(11).TextColor(t.TextMuted)
 				}
 			})
 			if len(st.Disks) > 0 {
 				ui.Column(c).Gap(10).Children(func() {
-					ui.Text(c, "存储").FontSize(12).Bold()
+					ui.Text(c, locales.StatsStorage()).FontSize(12).Bold()
 					for _, d := range st.Disks {
 						usage(c, d.Mount, formatBytes(d.Used)+" / "+formatBytes(d.Size), share(d.Used, d.Size))
 					}
@@ -692,17 +703,14 @@ func (m *Model) network(c *ui.Context, sess *session, h []sshconn.Stats) {
 	rx, tx := seriesRX(c), seriesTX(c)
 	st := h[len(h)-1]
 	// The interface shown: all of them, or one the select chose.
-	names := []string{allIfaces}
+	names := []string{locales.StatsAllInterfaces()}
 	for _, i := range st.Ifaces {
 		names = append(names, i.Name)
 	}
-	if !slices.Contains(names, sess.iface) {
+	if !slices.Contains(names[1:], sess.iface) {
 		sess.iface = allIfaces
 	}
 	iface := sess.iface
-	if iface == allIfaces {
-		iface = ""
-	}
 	type point struct{ rx, tx float64 }
 	pts := make([]point, len(h))
 	peak := 1024.0
@@ -714,19 +722,28 @@ func (m *Model) network(c *ui.Context, sess *session, h []sshconn.Stats) {
 	now := pts[len(pts)-1]
 	ui.Column(c).Gap(8).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, "网络").FontSize(12).Bold()
+			ui.Text(c, locales.StatsNetwork()).FontSize(12).Bold()
 			ui.Spacer(c)
 			// Plain text with its arrow, at the right of the heading.
-			ui.Select(c, &sess.iface, names).Label("网卡").FontSize(11).MaxWidth(140).MinWidth(0).
+			// The select says the localized label of allIfaces.
+			chosen := sess.iface
+			if chosen == allIfaces {
+				chosen = names[0]
+			}
+			ui.Select(c, &chosen, names).Label(locales.StatsInterface()).FontSize(11).MaxWidth(140).MinWidth(0).
 				Padding(0).Gap(4).Border(0, ui.Transparent).Background(ui.Transparent).Shadow(0, 0, 0, 0, ui.Transparent)
+			if chosen == names[0] {
+				chosen = allIfaces
+			}
+			sess.iface = chosen
 		})
 		ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-			legend(c, rx, "下行 "+formatRate(now.rx))
-			legend(c, tx, "上行 "+formatRate(now.tx))
+			legend(c, rx, locales.StatsIn(formatRate(now.rx)))
+			legend(c, tx, locales.StatsOut(formatRate(now.tx)))
 		})
 		top := niceCeil(peak)
 		grid, muted := hairline(c), t.TextMuted
-		chart := ui.Box(c).Height(120).Label("网络流量图")
+		chart := ui.Box(c).Height(120).Label(locales.StatsChart())
 		hovered := -1
 		if x, _, in := chart.PointerPosition(); in {
 			if w := chart.Bounds().W; w > 0 {
@@ -784,22 +801,24 @@ func (m *Model) network(c *ui.Context, sess *session, h []sshconn.Stats) {
 			if hovered >= 0 {
 				s := h[hovered]
 				ago := st.At.Sub(s.At).Round(time.Second)
-				when := "现在"
+				when := locales.StatsNow()
 				if ago > 0 {
-					when = fmt.Sprintf("%d 秒前", int(ago.Seconds()))
+					when = locales.StatsSecondsAgo(int(ago.Seconds()))
 				}
-				ui.Text(c, when+" · 下行 "+formatRate(pts[hovered].rx)+" · 上行 "+formatRate(pts[hovered].tx)).FontSize(11).TextColor(t.TextMuted)
+				ui.Text(c, locales.StatsReading(when, formatRate(pts[hovered].rx), formatRate(pts[hovered].tx))).FontSize(11).TextColor(t.TextMuted)
 				return
 			}
 			span := time.Duration(sshconn.HistoryLen) * 2 * time.Second
-			ui.Text(c, fmt.Sprintf("最近 %d 分钟", int(span.Minutes()))).FontSize(11).TextColor(t.TextMuted).Grow(1)
-			ui.Text(c, "峰值 "+formatRate(peak)).FontSize(11).TextColor(t.TextMuted)
+			ui.Text(c, locales.StatsLastMinutes(int(span.Minutes()))).FontSize(11).TextColor(t.TextMuted).Grow(1)
+			ui.Text(c, locales.StatsPeak(formatRate(peak))).FontSize(11).TextColor(t.TextMuted)
 		})
 	})
 }
 
-// allIfaces is the choice of every network interface but lo.
-const allIfaces = "全部网卡"
+// allIfaces is the choice of every network interface but lo: the empty
+// name, which sshconn's Net reads as all of them. The select shows it as
+// statsAllInterfaces.
+const allIfaces = ""
 
 // processes lists the processes using the most CPU, then memory.
 func processes(c *ui.Context, procs []sshconn.Proc) {
@@ -815,9 +834,9 @@ func processes(c *ui.Context, procs []sshconn.Proc) {
 	}
 	ui.Column(c).Gap(6).Children(func() {
 		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, "进程").FontSize(12).Bold().Grow(1)
+			ui.Text(c, locales.StatsProcesses()).FontSize(12).Bold().Grow(1)
 			cell("CPU", 52, true)
-			cell("内存", 64, true)
+			cell(locales.StatsMemory(), 64, true)
 		})
 		for _, p := range procs {
 			ui.Row(c).Key(p.PID).Gap(6).AlignItems(ui.Center).Children(func() {
@@ -878,11 +897,11 @@ func formatUptime(d time.Duration) string {
 	hours := int(d.Hours()) % 24
 	switch {
 	case days > 0:
-		return fmt.Sprintf("%d 天 %d 小时", days, hours)
+		return locales.StatsUptimeDays(days, hours)
 	case hours > 0:
-		return fmt.Sprintf("%d 小时 %d 分", hours, int(d.Minutes())%60)
+		return locales.StatsUptimeHours(hours, int(d.Minutes())%60)
 	}
-	return fmt.Sprintf("%d 分钟", int(d.Minutes()))
+	return locales.StatsUptimeMinutes(int(d.Minutes()))
 }
 
 func formatTime(t time.Time) string {

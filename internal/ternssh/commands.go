@@ -3,9 +3,10 @@ package ternssh
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
+
+	"ternssh-desktop/locales"
 )
 
 // QuickCommand is a command kept to send to a terminal with a click.
@@ -184,7 +185,7 @@ func (c *Client) SaveQuickCommand(ctx context.Context, q QuickCommand) ([]QuickC
 	})
 }
 
-var errNoCommand = errors.New("站点上没有这条快捷指令，可能已被删除")
+var errNoCommand error = &msgError{locales.SiteNoCommand}
 
 // DeleteQuickCommand removes a command from the site, and returns the
 // site's commands.

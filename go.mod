@@ -3,12 +3,14 @@ module ternssh-desktop
 go 1.27.3
 
 require (
+	github.com/alecthomas/chroma/v2 v2.14.0
 	github.com/egoist/mygo v0.8.3
 	github.com/pkg/sftp v1.13.12
 	golang.org/x/crypto v0.57.0
 )
 
 require (
+	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/ebitengine/purego v0.11.1 // indirect
 	github.com/go-text/typesetting v0.3.5 // indirect
 	github.com/kr/fs v0.1.0 // indirect

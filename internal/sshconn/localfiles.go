@@ -131,3 +131,33 @@ func sortEntries(entries []Entry) {
 func (*Files) Join(dir, name string) string { return path.Join(dir, name) }
 func (*Files) Dir(p string) string          { return path.Dir(p) }
 func (*Files) Base(p string) string         { return path.Base(p) }
+
+func (LocalFiles) Stat(p string) (os.FileInfo, error) { return os.Stat(p) }
+
+// ReadFile returns what a file holds, up to max bytes: ErrTooLarge past
+// them.
+func (LocalFiles) ReadFile(p string, max int64) ([]byte, error) {
+	r, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return readMax(r, max)
+}
+
+// WriteFile replaces what a file holds, keeping its mode, or makes it.
+func (LocalFiles) WriteFile(p string, data []byte) error { return os.WriteFile(p, data, 0o644) }
+
+// ErrTooLarge is a file too large to read whole.
+var ErrTooLarge = errors.New("文件太大")
+
+func readMax(r io.Reader, max int64) ([]byte, error) {
+	b, err := io.ReadAll(io.LimitReader(r, max+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(b)) > max {
+		return nil, ErrTooLarge
+	}
+	return b, nil
+}

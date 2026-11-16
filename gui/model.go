@@ -63,6 +63,8 @@ type Backend struct {
 	// ShowInFolder shows it in the system's file manager.
 	OpenPath     func(path string) error
 	ShowInFolder func(path string)
+	// OpenEditor opens a window for an editor of a file.
+	OpenEditor func(e *Editor) EditorHost
 	// PickFiles asks for files to upload; nil for none.
 	PickFiles func() ([]string, error)
 	// SaveFile asks where to save a file named name; "" when canceled.
@@ -102,6 +104,8 @@ type Model struct {
 
 	settings     settingsForm
 	settingsOpen bool
+
+	editors map[string]*Editor // the editors' windows open, by session and file
 
 	middlePressed string // the session whose tab the middle button presses
 

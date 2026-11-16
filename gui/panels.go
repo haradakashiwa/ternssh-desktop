@@ -258,10 +258,16 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 						m.listDir(f, p)
 					}
 				case f.local:
-					if m.backend.OpenPath != nil && menu.Item("打开").Chosen() {
+					if menu.Item("编辑").Chosen() {
+						m.openEditor(sess, f, p)
+					}
+					if m.backend.OpenPath != nil && menu.Item("用默认应用打开").Chosen() {
 						m.openLocalFile(p)
 					}
 				default:
+					if menu.Item("编辑").Chosen() {
+						m.openEditor(sess, f, p)
+					}
 					if menu.Item("下载").Chosen() {
 						m.download(f, p, "")
 					}
@@ -324,10 +330,8 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 				switch {
 				case e.Dir:
 					m.listDir(f, p)
-				case f.local:
-					m.openLocalFile(p)
 				default:
-					m.download(f, p, "")
+					m.openEditor(sess, f, p)
 				}
 			}
 			if files := table.DroppedFiles(); len(files) > 0 {

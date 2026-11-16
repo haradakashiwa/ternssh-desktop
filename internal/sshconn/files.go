@@ -154,3 +154,30 @@ func (c *counting) Read(p []byte) (int, error) {
 	}
 	return n, err
 }
+
+// Stat returns what a file is.
+func (f *Files) Stat(p string) (os.FileInfo, error) { return f.c.Stat(p) }
+
+// ReadFile returns what a file holds, up to max bytes: ErrTooLarge past
+// them.
+func (f *Files) ReadFile(p string, max int64) ([]byte, error) {
+	r, err := f.c.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return readMax(r, max)
+}
+
+// WriteFile replaces what a file holds, keeping its mode, or makes it.
+func (f *Files) WriteFile(p string, data []byte) error {
+	w, err := f.c.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(data)
+	if cerr := w.Close(); err == nil {
+		err = cerr
+	}
+	return err
+}

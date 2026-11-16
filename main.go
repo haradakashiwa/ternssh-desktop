@@ -108,6 +108,27 @@ func main() {
 			},
 			OpenPath:     mygo.Shell.OpenPath,
 			ShowInFolder: mygo.Shell.ShowItemInFolder,
+			OpenEditor: func(e *gui.Editor) gui.EditorHost {
+				w := mygo.NewWindow(mygo.WindowOptions{
+					Title:     e.Title,
+					Width:     920,
+					Height:    680,
+					MinWidth:  480,
+					MinHeight: 320,
+					Content:   ui.View(e.View),
+				})
+				w.OnClose(func(ev *mygo.CloseEvent) {
+					if !e.CanClose() {
+						ev.PreventDefault()
+					}
+				})
+				w.OnClosed(e.Closed)
+				return gui.EditorHost{
+					Update: func(fn func()) { w.Update(fn) },
+					Close:  w.Close,
+					Focus:  func() { w.Show(); w.Focus() },
+				}
+			},
 			PickFiles: func() ([]string, error) {
 				return mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: "选择要上传的文件", Multiple: true, ShowHiddenFiles: true})
 			},
@@ -155,6 +176,12 @@ func main() {
 		mygo.App.OnBeforeQuit(func(*mygo.QuitEvent) { quitting = true })
 		win.OnClose(func(e *mygo.CloseEvent) {
 			if quitting || st.Settings().QuitOnClose {
+				// Not while an editor has changes to save, which it asks
+				// about.
+				if !model.CanQuit() {
+					e.PreventDefault()
+					quitting = false
+				}
 				return
 			}
 			e.PreventDefault()

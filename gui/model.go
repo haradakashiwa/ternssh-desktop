@@ -57,10 +57,20 @@ type Backend struct {
 	Dial func(opts sshconn.LocalOptions, ev sshconn.Events) Conn
 	// PickFile asks for a file, as a private key to import; nil for none.
 	PickFile func() (string, error)
+	// PickDir asks for a directory, starting in start; "" when canceled.
+	PickDir func(start string) (string, error)
+	// OpenPath opens a file of this machine with its application, and
+	// ShowInFolder shows it in the system's file manager.
+	OpenPath     func(path string) error
+	ShowInFolder func(path string)
 	// PickFiles asks for files to upload; nil for none.
 	PickFiles func() ([]string, error)
 	// SaveFile asks where to save a file named name; "" when canceled.
 	SaveFile func(name string) (string, error)
+	// SetHotkey makes acc, an accelerator such as "Alt+Space", the
+	// system-wide shortcut that shows and hides the window, in place of
+	// the one before; "" removes it.
+	SetHotkey func(acc string) error
 }
 
 // Model is the state of the window.
@@ -87,6 +97,12 @@ type Model struct {
 	confirm     confirmation
 	confirmOpen bool
 
+	commandForm     commandForm
+	commandFormOpen bool
+
+	settings     settingsForm
+	settingsOpen bool
+
 	middlePressed string // the session whose tab the middle button presses
 
 	toast     string
@@ -108,6 +124,11 @@ type siteState struct {
 	local     []store.Server   // at home
 	terminals []store.Terminal // at home
 	groups    []store.Group    // at home
+
+	commands        []ternssh.QuickCommand // this machine's, or the site's
+	commandsLoaded  bool
+	commandsLoading bool
+	commandsErr     string
 
 	sessions []*session
 	current  int    // the session shown
@@ -132,11 +153,14 @@ type session struct {
 	status   sshconn.Status
 	err      string
 	dir      string
+	startDir string // where a local terminal started
 
-	showFiles, showStatus bool        // whether its panels show, at first for servers
-	files                 *filesState // the files panel, once shown
-	stats                 statsSource // the server's status, sampled once the panel shows
-	iface                 string      // the network interface its status shows
+	showBottom, showStatus bool        // whether its panels show, at first for servers
+	bottomTab              int         // the tab of the pane below, tabFiles or tabCommands
+	refocus                bool        // give the terminal back the keyboard, after a command was sent
+	files                  *filesState // the files panel, once shown
+	stats                  statsSource // the server's status, sampled once the panel shows
+	iface                  string      // the network interface its status shows
 }
 
 // New returns the model of the window: the home tab, then the sites of st.
@@ -176,6 +200,7 @@ func (m *Model) authOf(site store.Site) ternssh.Auth {
 
 // Start loads the servers of the tab shown.
 func (m *Model) Start() {
+	m.startHotkey()
 	if s := m.current(); s != nil {
 		m.refresh(s)
 	}
@@ -369,7 +394,7 @@ func portSuffix(port int) string {
 func (m *Model) open(s *siteState, sess *session, dial func(sshconn.Events) Conn) {
 	sess.id = store.NewID()
 	sess.status = sshconn.StatusConnecting
-	sess.showFiles, sess.showStatus = true, true
+	sess.showBottom, sess.showStatus = true, true
 	sess.conn = dial(sshconn.Events{
 		OnStatus: func(st sshconn.Status, err error) {
 			m.update(func() {
@@ -403,6 +428,9 @@ func (m *Model) openShell(s *siteState, t store.Terminal) {
 		mode:     Shell,
 		localID:  t.ID,
 		status:   sshconn.StatusReady,
+		startDir: expandHome(t.Dir),
+		// Its files and the quick commands show below, as a server's.
+		showBottom: true,
 	}
 	if m.backend.NewShell != nil {
 		term, err := m.backend.NewShell(expandHome(t.Dir), func(int) {
@@ -502,6 +530,22 @@ func expandHome(dir string) string {
 		if home, err := os.UserHomeDir(); err == nil {
 			return filepath.Join(home, dir[1:])
 		}
+	}
+	return dir
+}
+
+// shortenHome writes a path in the home directory from "~", as
+// expandHome reads it.
+func shortenHome(dir string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return dir
+	}
+	if dir == home {
+		return "~"
+	}
+	if rel, ok := strings.CutPrefix(dir, home+string(filepath.Separator)); ok {
+		return "~/" + filepath.ToSlash(rel)
 	}
 	return dir
 }

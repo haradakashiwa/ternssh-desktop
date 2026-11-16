@@ -3,8 +3,8 @@ package gui
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -31,9 +31,26 @@ type statsSource interface {
 	Stop()
 }
 
+// fileSystem is what the files panel browses: a server's files over
+// SFTP (sshconn.Files), or this machine's (sshconn.LocalFiles).
+type fileSystem interface {
+	Close() error
+	Home() (string, error)
+	Join(dir, name string) string
+	Dir(p string) string
+	Base(p string) string
+	List(dir string) ([]sshconn.Entry, error)
+	Mkdir(p string) error
+	Rename(from, to string) error
+	Remove(p string) error
+	Upload(local, dir string, progress sshconn.Progress) (string, error)
+	Download(remote, local string, progress sshconn.Progress) error
+}
+
 // filesState is what the files panel of a session shows.
 type filesState struct {
-	fs        *sshconn.Files
+	fs        fileSystem
+	local     bool // this machine's files, of a local terminal
 	opening   bool
 	dir       string
 	pathInput string
@@ -79,21 +96,23 @@ func closePanels(sess *session) {
 
 // panelButtons show and hide the panels, at the end of the tab bar.
 func (m *Model) panelButtons(c *ui.Context, sess *session) {
-	if !sess.hasPanels() {
-		return
-	}
 	t := c.Theme()
-	for _, b := range []struct {
+	type button struct {
 		shown *bool
 		svg   *ui.SVG
 		label string
-	}{{&sess.showFiles, folderIcon, "文件 (SFTP)"}, {&sess.showStatus, activityIcon, "服务器状态"}} {
+	}
+	buttons := []button{{&sess.showBottom, panelBottomIcon, "文件与快捷指令"}}
+	if sess.hasPanels() {
+		buttons = []button{{&sess.showBottom, panelBottomIcon, "文件与快捷指令"}, {&sess.showStatus, activityIcon, "服务器状态"}}
+	}
+	for _, b := range buttons {
 		btn := ui.ButtonBase(c).Size(28, 26).Radius(7).Center().Label(b.label).Tooltip(b.label)
 		color := t.TextMuted
 		switch {
 		case *b.shown:
 			btn.Background(t.Accent.Alpha(0.16))
-			color = t.Accent
+			color = accentInk(c)
 		case btn.Hovered():
 			btn.Background(hover(c))
 		}
@@ -104,28 +123,31 @@ func (m *Model) panelButtons(c *ui.Context, sess *session) {
 	}
 }
 
-// sessionView is the terminal of a session, with its files below and its
-// status beside it.
+// sessionView is the terminal of a session, with its files and quick
+// commands below and its status beside it.
 func (m *Model) sessionView(c *ui.Context, sess *session) {
 	terminalPane := func() {
 		ui.Column(c).Key(sess.id).Fill().MinHeight(0).Children(func() {
 			if sess.term != nil {
-				terminal.View(c, sess.term).Fill().AutoFocus()
+				v := terminal.View(c, sess.term).Fill().AutoFocus()
+				if sess.refocus {
+					v.Focus()
+					sess.refocus = false
+				}
 			}
 		})
 	}
-	panels := sess.hasPanels()
 	ui.Row(c).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
 		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
-			if panels && sess.showFiles {
+			if sess.showBottom {
 				ui.SplitVerticalPercent(c, &m.filesSplit, terminalPane, func() {
-					ui.Column(c).Key(sess.id + "/files").Fill().MinHeight(0).Children(func() { m.filesPanel(c, sess) })
+					ui.Column(c).Key(sess.id + "/bottom").Fill().MinHeight(0).Children(func() { m.bottomPanel(c, sess) })
 				}).Grow(1).MinHeight(0)
 			} else {
 				ui.Column(c).Grow(1).MinHeight(0).Children(terminalPane)
 			}
 		})
-		if panels && sess.showStatus {
+		if sess.hasPanels() && sess.showStatus {
 			ui.Box(c).Width(1).Background(hairline(c)).Shrink(0)
 			ui.Column(c).Key(sess.id + "/status").Width(statusWidth).Shrink(0).MinHeight(0).Children(func() { m.statusPanel(c, sess) })
 		}
@@ -146,6 +168,16 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 		sess.files = &filesState{selected: -1}
 	}
 	f := sess.files
+	if f.fs == nil && sess.mode == Shell {
+		// This machine's files, from where the terminal started.
+		fs := sshconn.LocalFiles{Start: sess.startDir}
+		f.fs, f.local = fs, true
+		home, err := fs.Home()
+		if err != nil {
+			f.err = err.Error()
+		}
+		m.listDir(f, home)
+	}
 	if f.fs == nil {
 		if f.err != "" {
 			panelHint(c, f.err)
@@ -181,9 +213,9 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 
 	// The path, which takes another to go to.
 	ui.Row(c).Padding(8, 8, 6, 8).Gap(4).AlignItems(ui.Center).Children(func() {
-		up := iconButton(c, upIcon, "上级目录").Disabled(f.dir == "/")
+		up := iconButton(c, upIcon, "上级目录").Disabled(f.fs.Dir(f.dir) == f.dir)
 		if up.Clicked() {
-			m.listDir(f, path.Dir(f.dir))
+			m.listDir(f, f.fs.Dir(f.dir))
 		}
 		in := ui.TextInput(c, &f.pathInput).Grow(1).MinWidth(0).FontSize(12).Label("路径")
 		if in.Submitted() {
@@ -194,10 +226,10 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 		}
 		if iconButton(c, folderPlusIcon, "新建文件夹").Clicked() {
 			m.openPrompt("新建文件夹", "名称", "", "新建", func(name string) {
-				m.fileOp(f, func() error { return f.fs.Mkdir(path.Join(f.dir, name)) })
+				m.fileOp(f, func() error { return f.fs.Mkdir(f.fs.Join(f.dir, name)) })
 			})
 		}
-		if m.backend.PickFiles != nil && iconButton(c, uploadIcon, "上传文件").Clicked() {
+		if m.backend.PickFiles != nil && iconButton(c, uploadIcon, map[bool]string{false: "上传文件", true: "复制文件到这里"}[f.local]).Clicked() {
 			pick := m.backend.PickFiles
 			go func() {
 				paths, err := pick()
@@ -219,12 +251,17 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 					return
 				}
 				e := f.entries[row]
-				p := path.Join(f.dir, e.Name)
-				if e.Dir {
+				p := f.fs.Join(f.dir, e.Name)
+				switch {
+				case e.Dir:
 					if menu.Item("打开").Chosen() {
 						m.listDir(f, p)
 					}
-				} else {
+				case f.local:
+					if m.backend.OpenPath != nil && menu.Item("打开").Chosen() {
+						m.openLocalFile(p)
+					}
+				default:
 					if menu.Item("下载").Chosen() {
 						m.download(f, p, "")
 					}
@@ -238,20 +275,23 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 						}()
 					}
 				}
+				if f.local && m.backend.ShowInFolder != nil && menu.Item(showInFolderLabel()).Chosen() {
+					m.backend.ShowInFolder(p)
+				}
 				if menu.Item("复制路径").Chosen() {
 					c.WriteClipboard(p)
 				}
 				menu.Separator()
 				if menu.Item("重命名…").Chosen() {
 					m.openPrompt("重命名", "名称", e.Name, "重命名", func(name string) {
-						m.fileOp(f, func() error { return f.fs.Rename(p, path.Join(f.dir, name)) })
+						m.fileOp(f, func() error { return f.fs.Rename(p, f.fs.Join(f.dir, name)) })
 					})
 				}
 				if menu.Item("删除").Danger().Chosen() {
 					what := map[bool]string{true: "文件夹和其中的所有内容", false: "文件"}[e.Dir]
 					m.ask(confirmation{
 						title:   "删除「" + e.Name + "」？",
-						message: "会从服务器上删除这个" + what + "，无法恢复。",
+						message: map[bool]string{false: "会从服务器上删除这个", true: "会从本机删除这个"}[f.local] + what + "，无法恢复。",
 						action:  "删除",
 						do:      func() { m.fileOp(f, func() error { return f.fs.Remove(p) }) },
 					})
@@ -265,7 +305,7 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 					ui.Row(c).Gap(6).AlignItems(ui.Center).MinWidth(0).Children(func() {
 						svg, color := fileIcon, t.TextMuted
 						if e.Dir {
-							svg, color = folderIcon, t.Accent
+							svg, color = folderIcon, accentInk(c)
 						}
 						ui.Icon(c, svg).Size(14, 14).TextColor(color).Shrink(0)
 						ui.Text(c, e.Name).FontSize(12).SingleLine().MinWidth(0)
@@ -280,10 +320,14 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 			}).Grow(1).MinHeight(0).Label("文件")
 			if table.Submitted() && f.selected >= 0 && f.selected < len(f.entries) {
 				e := f.entries[f.selected]
-				if e.Dir {
-					m.listDir(f, path.Join(f.dir, e.Name))
-				} else {
-					m.download(f, path.Join(f.dir, e.Name), "")
+				p := f.fs.Join(f.dir, e.Name)
+				switch {
+				case e.Dir:
+					m.listDir(f, p)
+				case f.local:
+					m.openLocalFile(p)
+				default:
+					m.download(f, p, "")
 				}
 			}
 			if files := table.DroppedFiles(); len(files) > 0 {
@@ -295,7 +339,7 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 					ui.Text(c, "正在读取…").FontSize(11).TextColor(t.TextMuted)
 				})
 			} else if len(f.entries) == 0 && f.err == "" {
-				ui.Text(c, "空文件夹 · 把文件拖到这里上传").FontSize(11).TextColor(t.TextMuted).Padding(4, 10)
+				ui.Text(c, map[bool]string{false: "空文件夹 · 把文件拖到这里上传", true: "空文件夹 · 把文件拖到这里复制"}[f.local]).FontSize(11).TextColor(t.TextMuted).Padding(4, 10)
 			}
 		})
 		m.transfers(c, f)
@@ -411,7 +455,7 @@ func (m *Model) upload(f *filesState, paths []string) {
 // folder when dest is empty.
 func (m *Model) download(f *filesState, remote, dest string) {
 	if dest == "" {
-		dest = downloadPath(path.Base(remote))
+		dest = downloadPath(f.fs.Base(remote))
 	}
 	tr := &transfer{name: filepath.Base(dest)}
 	f.transfers = append(f.transfers, tr)
@@ -427,6 +471,26 @@ func (m *Model) download(f *filesState, remote, dest string) {
 			m.notify("已下载到 " + displayPath(dest))
 		})
 	}()
+}
+
+// openLocalFile opens a file of this machine with its application.
+func (m *Model) openLocalFile(p string) {
+	if m.backend.OpenPath == nil {
+		return
+	}
+	if err := m.backend.OpenPath(p); err != nil {
+		m.notify("无法打开 " + displayPath(p) + ": " + err.Error())
+	}
+}
+
+func showInFolderLabel() string {
+	switch runtime.GOOS {
+	case "darwin":
+		return "在访达中显示"
+	case "windows":
+		return "在资源管理器中显示"
+	}
+	return "在文件管理器中显示"
 }
 
 // downloadPath is where a file named name downloads: in the Downloads
@@ -466,7 +530,7 @@ func (m *Model) transfers(c *ui.Context, f *filesState) {
 		ui.Row(c).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, "传输").FontSize(11).Bold().TextColor(t.TextMuted).Grow(1)
 			if ui.ButtonBase(c).Label("清除已完成").Children(func() {
-				ui.Text(c, "清除已完成").FontSize(11).TextColor(t.Accent)
+				ui.Text(c, "清除已完成").FontSize(11).TextColor(accentInk(c))
 			}).Clicked() {
 				var left []*transfer
 				for _, tr := range f.transfers {
@@ -591,7 +655,7 @@ func usage(c *ui.Context, name, figures string, frac float64) {
 			ui.Text(c, name).FontSize(12).Bold().SingleLine().Grow(1).MinWidth(0)
 			ui.Text(c, figures).FontSize(11).TextColor(t.TextMuted).SingleLine()
 		})
-		track, fill := hover(c), seriesRX(c)
+		track, fill := hover(c), accentInk(c)
 		ui.Box(c).Height(6).Label(name).Draw(func(p *ui.Painter, r ui.Rect) {
 			p.Fill(r, track, 3)
 			if w := r.W * float32(min(max(frac, 0), 1)); w > 0 {
@@ -647,8 +711,10 @@ func (m *Model) network(c *ui.Context, sess *session, h []sshconn.Stats) {
 	ui.Column(c).Gap(8).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, "网络").FontSize(12).Bold()
-			ui.Select(c, &sess.iface, names).Label("网卡").FontSize(11).MaxWidth(120)
 			ui.Spacer(c)
+			// Plain text with its arrow, at the right of the heading.
+			ui.Select(c, &sess.iface, names).Label("网卡").FontSize(11).MaxWidth(140).MinWidth(0).
+				Padding(0).Gap(4).Border(0, ui.Transparent).Background(ui.Transparent).Shadow(0, 0, 0, 0, ui.Transparent)
 		})
 		ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 			legend(c, rx, "下行 "+formatRate(now.rx))

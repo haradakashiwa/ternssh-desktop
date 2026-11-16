@@ -6,8 +6,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -63,12 +61,7 @@ func (f *Files) List(dir string) ([]Entry, error) {
 		}
 		entries = append(entries, e)
 	}
-	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].Dir != entries[j].Dir {
-			return entries[i].Dir
-		}
-		return strings.ToLower(entries[i].Name) < strings.ToLower(entries[j].Name)
-	})
+	sortEntries(entries)
 	return entries, nil
 }
 

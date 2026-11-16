@@ -310,8 +310,8 @@ func TestPanelToggles(t *testing.T) {
 	sess := site.sessions[0]
 	tt := ui.NewTester(m.View, 1100, 700)
 	// Both show at first, until the connection is up.
-	if !sess.showFiles || !sess.showStatus || !tt.HasText("连接成功后显示服务器状态") || !tt.HasText("连接成功后可以浏览服务器上的文件") {
-		t.Fatalf("files %v, status %v, texts %q", sess.showFiles, sess.showStatus, tt.Texts())
+	if !sess.showBottom || !sess.showStatus || !tt.HasText("连接成功后显示服务器状态") || !tt.HasText("连接成功后可以浏览服务器上的文件") {
+		t.Fatalf("files %v, status %v, texts %q", sess.showBottom, sess.showStatus, tt.Texts())
 	}
 	// The files below the terminal, the status beside it.
 	files, _ := tt.Find("连接成功后可以浏览服务器上的文件")
@@ -319,24 +319,28 @@ func TestPanelToggles(t *testing.T) {
 	if files.Y < 300 || status.X < 800 {
 		t.Errorf("files at %v, status at %v", files, status)
 	}
-	tt.Click("文件 (SFTP)")
-	if sess.showFiles || tt.HasText("连接成功后可以浏览服务器上的文件") {
+	tt.Click("文件与快捷指令")
+	if sess.showBottom || tt.HasText("连接成功后可以浏览服务器上的文件") {
 		t.Errorf("files still shown")
 	}
 	tt.Click("服务器状态")
 	if sess.showStatus || tt.HasText("连接成功后显示服务器状态") {
 		t.Errorf("status still shown")
 	}
-	tt.Click("文件 (SFTP)")
-	if !sess.showFiles {
+	tt.Click("文件与快捷指令")
+	if !sess.showBottom {
 		t.Errorf("files not shown again")
 	}
-	// A local terminal has none.
+	// A local terminal has no status, and its pane below the quick
+	// commands alone.
 	m.selectSite(0)
 	m.newSession()
 	tt.Frame()
 	if _, ok := tt.Find("服务器状态"); ok || tt.HasText("连接成功后可以浏览服务器上的文件") {
 		t.Error("a local terminal shows the panels")
+	}
+	if _, ok := tt.Find("快捷指令"); !ok {
+		t.Error("a local terminal has no quick commands")
 	}
 }
 
@@ -586,6 +590,14 @@ func TestAddLocalServer(t *testing.T) {
 
 func TestAddLocalTerminal(t *testing.T) {
 	m, st := testModel(t)
+	apply := updatesHere(t, m)
+	userHome, _ := os.UserHomeDir()
+	picked := filepath.Join(userHome, "src")
+	var asked string
+	m.backend.PickDir = func(start string) (string, error) {
+		asked = start
+		return picked, nil
+	}
 	m.Start()
 	tt := ui.NewTester(m.View, 1100, 700)
 	if err := tt.Click("添加服务器或终端"); err != nil {
@@ -596,6 +608,19 @@ func TestAddLocalTerminal(t *testing.T) {
 	}
 	snapshot(t, tt, "add-terminal")
 	f := &m.serverForm
+	// The directory picked, written from the home directory; the picker
+	// starts in the one written.
+	tt.Click("选择…")
+	apply(func() bool { return f.dir != "" })
+	if f.dir != "~/src" || asked != userHome {
+		t.Fatalf("dir %q, picker started in %q", f.dir, asked)
+	}
+	picked = "/opt"
+	tt.Click("选择…")
+	apply(func() bool { return f.dir != "~/src" })
+	if f.dir != "/opt" || asked != filepath.Join(userHome, "src") {
+		t.Fatalf("dir %q, picker started in %q", f.dir, asked)
+	}
 	f.dir = filepath.Join(t.TempDir(), "nope")
 	tt.Frame()
 	if err := tt.Click("添加"); err != nil {

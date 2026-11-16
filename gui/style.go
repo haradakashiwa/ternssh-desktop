@@ -14,26 +14,57 @@ func icon(shapes string) *ui.SVG {
 }
 
 var (
-	plusIcon       = icon(`<path d="M8 3v10M3 8h10"/>`)
-	closeIcon      = icon(`<path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>`)
-	refreshIcon    = icon(`<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 2.5v3h-3"/>`)
-	serverIcon     = icon(`<rect x="2.5" y="2.5" width="11" height="4.5" rx="1.2"/><rect x="2.5" y="9" width="11" height="4.5" rx="1.2"/><path d="M5 4.75h.01M5 11.25h.01"/>`)
-	folderIcon     = icon(`<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/>`)
-	laptopIcon     = icon(`<rect x="3" y="3.5" width="10" height="7" rx="1"/><path d="M1.5 12.5h13"/>`)
-	terminalIcon   = icon(`<rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6.5l2 1.5-2 1.5M8 10h3"/>`)
-	searchIcon     = icon(`<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/>`)
-	moreIcon       = icon(`<path d="M3.5 8h.01M8 8h.01M12.5 8h.01" stroke-width="2.2"/>`)
-	chevronIcon    = icon(`<path d="M6 4l4 4-4 4"/>`)
-	expandIcon     = icon(`<path d="M5 6l3-3 3 3M5 10l3 3 3-3"/>`)
-	collapseIcon   = icon(`<path d="M5 3l3 3 3-3M5 13l3-3 3 3"/>`)
-	activityIcon   = icon(`<path d="M1.5 8.5h3l2-5 3 9 2-4h3"/>`)
-	upIcon         = icon(`<path d="M8 13V3M4 7l4-4 4 4"/>`)
-	uploadIcon     = icon(`<path d="M8 10.5V2.5M5 5.5l3-3 3 3M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"/>`)
-	downloadIcon   = icon(`<path d="M8 2.5v8M5 7.5l3 3 3-3M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"/>`)
-	fileIcon       = icon(`<path d="M4 1.5h5l3.5 3.5v8.5a1 1 0 0 1-1 1h-7.5a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z"/><path d="M9 1.5V5h3.5"/>`)
-	folderPlusIcon = icon(`<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/><path d="M8 6.8v3.9M6.05 8.75h3.9"/>`)
-	keyIcon        = icon(`<circle cx="5.5" cy="10.5" r="3"/><path d="M7.6 8.4L13.5 2.5M11.5 4.5l1.5 1.5"/>`)
+	plusIcon        = icon(`<path d="M8 3v10M3 8h10"/>`)
+	closeIcon       = icon(`<path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>`)
+	refreshIcon     = icon(`<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 2.5v3h-3"/>`)
+	serverIcon      = icon(`<rect x="2.5" y="2.5" width="11" height="4.5" rx="1.2"/><rect x="2.5" y="9" width="11" height="4.5" rx="1.2"/><path d="M5 4.75h.01M5 11.25h.01"/>`)
+	folderIcon      = icon(`<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/>`)
+	laptopIcon      = icon(`<rect x="3" y="3.5" width="10" height="7" rx="1"/><path d="M1.5 12.5h13"/>`)
+	terminalIcon    = icon(`<rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6.5l2 1.5-2 1.5M8 10h3"/>`)
+	searchIcon      = icon(`<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/>`)
+	moreIcon        = icon(`<path d="M3.5 8h.01M8 8h.01M12.5 8h.01" stroke-width="2.2"/>`)
+	chevronIcon     = icon(`<path d="M6 4l4 4-4 4"/>`)
+	expandIcon      = icon(`<path d="M5 6l3-3 3 3M5 10l3 3 3-3"/>`)
+	collapseIcon    = icon(`<path d="M5 3l3 3 3-3M5 13l3-3 3 3"/>`)
+	activityIcon    = icon(`<path d="M1.5 8.5h3l2-5 3 9 2-4h3"/>`)
+	upIcon          = icon(`<path d="M8 13V3M4 7l4-4 4 4"/>`)
+	uploadIcon      = icon(`<path d="M8 10.5V2.5M5 5.5l3-3 3 3M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"/>`)
+	downloadIcon    = icon(`<path d="M8 2.5v8M5 7.5l3 3 3-3M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"/>`)
+	fileIcon        = icon(`<path d="M4 1.5h5l3.5 3.5v8.5a1 1 0 0 1-1 1h-7.5a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z"/><path d="M9 1.5V5h3.5"/>`)
+	folderPlusIcon  = icon(`<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/><path d="M8 6.8v3.9M6.05 8.75h3.9"/>`)
+	settingsIcon    = icon(`<path d="M2.5 4.5h6.5M13 4.5h.5M2.5 11.5h.5M7 11.5h6.5"/><circle cx="11" cy="4.5" r="1.75"/><circle cx="5" cy="11.5" r="1.75"/>`)
+	zapIcon         = icon(`<path d="M9 1.5L3.5 9h4l-1 5.5L12.5 7h-4z"/>`)
+	panelBottomIcon = icon(`<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M2 9.5h12"/>`)
+	keyIcon         = icon(`<circle cx="5.5" cy="10.5" r="3"/><path d="M7.6 8.4L13.5 2.5M11.5 4.5l1.5 1.5"/>`)
 )
+
+// brand is the app's accent, in place of the system's.
+var brand = ui.Hex("#008154")
+
+// branded returns t with the brand accent: buttons, checked controls,
+// focus rings, selections and the chosen tab.
+func branded(t *ui.Theme) *ui.Theme {
+	b := *t
+	white, black := ui.Hex("#ffffff"), ui.Hex("#000000")
+	b.Accent, b.AccentText = brand, white
+	if b.Dark {
+		b.AccentHover, b.AccentPressed = brand.Mix(white, 0.15), brand.Mix(black, 0.15)
+		b.Selection, b.Focus = brand.Alpha(0.45), brand.Mix(white, 0.25).Alpha(0.7)
+	} else {
+		b.AccentHover, b.AccentPressed = brand.Mix(black, 0.12), brand.Mix(black, 0.25)
+		b.Selection, b.Focus = brand.Alpha(0.25), brand.Alpha(0.55)
+	}
+	return &b
+}
+
+// accentInk is the accent for text and icons, lighter on a dark
+// background, where the brand green itself is too dim to read.
+func accentInk(c *ui.Context) ui.Color {
+	if c.Theme().Dark {
+		return brand.Mix(ui.Hex("#ffffff"), 0.35)
+	}
+	return brand
+}
 
 // panel is the background of what floats over the window, dialogs and
 // notices: nearly opaque. Glass would bend the text under its edges into

@@ -80,14 +80,17 @@ type Secrets interface {
 }
 
 type data struct {
-	Sites      []Site     `json:"sites"`
-	Servers    []Server   `json:"servers"`
-	Terminals  []Terminal `json:"terminals,omitempty"`
-	Groups     []Group    `json:"groups,omitempty"`
-	ActiveSite string     `json:"activeSite,omitempty"`
+	Sites     []Site     `json:"sites"`
+	Servers   []Server   `json:"servers"`
+	Terminals []Terminal `json:"terminals,omitempty"`
+	Groups    []Group    `json:"groups,omitempty"`
+	// QuickCommands are the quick commands of the 本机 tab.
+	QuickCommands []QuickCommand `json:"quickCommands,omitempty"`
+	ActiveSite    string         `json:"activeSite,omitempty"`
 	// SiteHostKeys are the host keys of the servers a site keeps, by
 	// siteHostKey.
 	SiteHostKeys map[string]string `json:"siteHostKeys,omitempty"`
+	Settings     Settings          `json:"settings"`
 }
 
 func siteHostKey(siteID, serverID string) string { return siteID + "/" + serverID }

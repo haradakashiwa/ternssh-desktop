@@ -14,6 +14,7 @@ import (
 
 // View builds the window.
 func (m *Model) View(c *ui.Context) {
+	c.SetTheme(branded(c.Theme()))
 	t := c.Theme()
 	// The window's material shows wherever the view draws no background.
 	if c.Vibrancy() {
@@ -22,8 +23,14 @@ func (m *Model) View(c *ui.Context) {
 		c.Root().Background(t.Background)
 	}
 
-	if c.Shortcut(newSessionMods, ui.KeyT) && !c.ShortcutRepeated() {
-		m.newSession()
+	// The keys of a hotkey being recorded are its own.
+	if !m.settings.recording {
+		if c.Shortcut(newSessionMods, ui.KeyT) && !c.ShortcutRepeated() {
+			m.newSession()
+		}
+		if c.Shortcut(ui.Cmd, ui.KeyComma) && !c.ShortcutRepeated() {
+			m.OpenSettings()
+		}
 	}
 
 	ui.Column(c).Fill().Children(func() {
@@ -39,7 +46,9 @@ func (m *Model) View(c *ui.Context) {
 	m.serverDialog(c)
 	m.groupDialog(c)
 	m.promptDialog(c)
+	m.commandDialog(c)
 	m.confirmDialog(c)
+	m.settingsDialog(c)
 	m.toastView(c)
 }
 
@@ -65,6 +74,9 @@ func (m *Model) titleBar(c *ui.Context) {
 			if b.Clicked() {
 				m.refresh(s)
 			}
+		}
+		if iconButton(c, settingsIcon, "设置").Clicked() {
+			m.OpenSettings()
 		}
 	})
 }

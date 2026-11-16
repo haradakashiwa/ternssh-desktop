@@ -401,13 +401,41 @@ func (m *Model) terminalForm(c *ui.Context, f *serverForm) {
 	}
 	ui.Form(c, func() {
 		ui.Field(c, "名称", func() { ui.TextInput(c, &f.name).Placeholder("本地终端").AutoFocus() })
-		ui.Field(c, "起始目录", func() { ui.TextInput(c, &f.dir).Placeholder("~（主目录）") })
+		ui.Field(c, "起始目录", func() {
+			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+				ui.TextInput(c, &f.dir).Placeholder("~（主目录）").Grow(1)
+				if m.backend.PickDir != nil && ui.Button(c, "选择…").Clicked() {
+					m.pickDir(f)
+				}
+			})
+		})
 		groupField(c, f)
 	})
 	ui.Text(c, "在本机打开 shell。").FontSize(11).TextColor(c.Theme().TextMuted)
 	errorText(c, f.err)
 	dialogButtons(c, false, map[bool]string{true: "添加", false: "保存"}[f.editing == ""],
 		func() { m.serverFormOpen = false }, m.saveTerminal)
+}
+
+// pickDir asks for the directory a terminal starts in, from the one the
+// form has.
+func (m *Model) pickDir(f *serverForm) {
+	pick := m.backend.PickDir
+	start := expandHome(strings.TrimSpace(f.dir))
+	if start == "" {
+		start, _ = os.UserHomeDir()
+	}
+	go func() {
+		dir, err := pick(start)
+		m.update(func() {
+			switch {
+			case err != nil:
+				f.err = err.Error()
+			case dir != "":
+				f.dir, f.err = shortenHome(dir), ""
+			}
+		})
+	}()
 }
 
 func (m *Model) saveTerminal() {

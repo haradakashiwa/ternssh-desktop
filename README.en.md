@@ -8,6 +8,10 @@ The desktop client of [ternssh](https://github.com/haradakashiwa/ternssh): a nat
 - **Synced across devices**: once a ternssh site is added, its servers, groups and snippets appear in a tab of their own, and changes made in the client are written back to the site.
 - **Every connection is made from this machine**: a site only syncs the SSH details, and no traffic goes through it.
 
+![A local terminal and its files](docs/screenshot-local.png)
+
+![A server's terminal, files and status](docs/screenshot-server.png)
+
 ## Download
 
 Download from [Releases](https://github.com/haradakashiwa/ternssh-desktop/releases):

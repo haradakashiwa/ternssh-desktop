@@ -8,6 +8,10 @@
 - **多设备同步**：添加 ternssh 站点后，站点上的服务器、分组和快捷指令出现在独立的标签里，在客户端的修改会写回站点。
 - **所有连接都从本机发起**：站点只用来同步 SSH 信息，不经它转发流量。
 
+![本机终端与文件](docs/screenshot-local.png)
+
+![服务器终端、文件与状态监控](docs/screenshot-server.png)
+
 ## 下载
 
 在 [Releases](https://github.com/haradakashiwa/ternssh-desktop/releases) 下载：

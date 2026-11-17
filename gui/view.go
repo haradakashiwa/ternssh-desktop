@@ -286,10 +286,9 @@ func (m *Model) serverRow(c *ui.Context, s *siteState, d serverRowData, open fun
 	t := c.Theme()
 	row := ui.ButtonBase(c).Key(d.key).Padding(6, 8, 6, 8+float32(d.depth)*14+16).Gap(8).Radius(8).AlignItems(ui.Center).Label(d.name).
 		Drag(d.drag)
-	switch {
-	case s.selected == d.key:
-		row.Background(selected(c))
-	case row.Hovered():
+	// No highlight for the row chosen: it would read as the server the
+	// terminal shown is on.
+	if row.Hovered() {
 		row.Background(hover(c))
 	}
 	if row.Clicked() {
@@ -317,7 +316,7 @@ func (m *Model) serverRow(c *ui.Context, s *siteState, d serverRowData, open fun
 			ui.Text(c, d.name).FontSize(13).SingleLine()
 			ui.Text(c, d.addr).FontSize(11).TextColor(t.TextMuted).SingleLine()
 		})
-		if row.Hovered() || s.selected == d.key {
+		if row.Hovered() {
 			b := ui.ButtonBase(c).Size(24, 22).Radius(6).Center().Label(locales.ViewConnectTo(d.name)).Tooltip(locales.ViewOpenTerminal())
 			if b.Hovered() {
 				b.Background(t.Accent).TextColor(t.AccentText)

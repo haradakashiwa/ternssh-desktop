@@ -11,7 +11,17 @@ type Settings struct {
 	// Language is the language the app shows, as "en" or "zh-Hans";
 	// empty to follow the system's.
 	Language string `json:"language,omitempty"`
+	// CommandTarget is where a quick command clicked is sent:
+	// CommandTargetCurrent, CommandTargetAll or CommandTargetAsk.
+	CommandTarget string `json:"commandTarget,omitempty"`
 }
+
+// Where a quick command clicked is sent.
+const (
+	CommandTargetCurrent = ""    // the terminal shown
+	CommandTargetAll     = "all" // every terminal connected, in every tab
+	CommandTargetAsk     = "ask" // asked each time
+)
 
 // Settings returns the app's preferences.
 func (s *Store) Settings() Settings {

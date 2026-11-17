@@ -110,6 +110,9 @@ type Model struct {
 	commandForm     commandForm
 	commandFormOpen bool
 
+	commandAsk     commandAsk
+	commandAskOpen bool
+
 	settings     settingsForm
 	settingsOpen bool
 

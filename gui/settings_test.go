@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/egoist/mygo/ui"
+
+	"ternssh-desktop/internal/store"
 )
 
 func TestSettings(t *testing.T) {
@@ -27,6 +29,14 @@ func TestSettings(t *testing.T) {
 		t.Fatal("the settings are not shown")
 	}
 	snapshot(t, tt, "settings")
+	// Where quick commands go is saved as it is chosen.
+	m.settings.target = 2
+	tt.Frame()
+	if got := st.Settings().CommandTarget; got != store.CommandTargetAsk {
+		t.Fatalf("command target %q", got)
+	}
+	m.settings.target = 0
+	tt.Frame()
 	if err := tt.Click("快捷键"); err != nil {
 		t.Fatal(err)
 	}

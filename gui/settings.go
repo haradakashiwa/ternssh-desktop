@@ -7,6 +7,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
+	"ternssh-desktop/internal/store"
 	"ternssh-desktop/locales"
 )
 
@@ -19,6 +20,7 @@ type settingsForm struct {
 	err         string
 	closeAction int // 0 keeps the app in the tray, 1 quits
 	language    int // of languages
+	target      int // of commandTargets
 }
 
 // The tabs of the settings.
@@ -33,6 +35,13 @@ const hotkeyID = "hotkey"
 // languages are the languages the app is written in, by tag: "" follows
 // the system's.
 var languages = []string{"", "en", "zh-Hans"}
+
+// commandTargets are where a quick command clicked may be sent.
+var commandTargets = []string{store.CommandTargetCurrent, store.CommandTargetAll, store.CommandTargetAsk}
+
+func commandTargetLabels() []string {
+	return []string{locales.SettingsCommandTargetCurrent(), locales.SettingsCommandTargetAll(), locales.SettingsCommandTargetAsk()}
+}
 
 // languageLabels name the languages, each in itself but the system's.
 func languageLabels() []string {
@@ -49,6 +58,11 @@ func (m *Model) OpenSettings() {
 	for i, tag := range languages {
 		if tag == st.Language {
 			m.settings.language = i
+		}
+	}
+	for i, target := range commandTargets {
+		if target == st.CommandTarget {
+			m.settings.target = i
 		}
 	}
 	m.settingsOpen = true
@@ -112,11 +126,19 @@ func (m *Model) generalSettings(c *ui.Context) {
 		ui.Field(c, locales.SettingsLanguage(), func() {
 			choose(c, &f.language, locales.SettingsLanguage(), languageLabels())
 		})
+		ui.Field(c, locales.SettingsCommandTarget(), func() {
+			ui.Column(c).Gap(6).Children(func() {
+				choose(c, &f.target, locales.SettingsCommandTarget(), commandTargetLabels())
+				ui.Text(c, locales.SettingsCommandTargetHint()).FontSize(11).TextColor(c.Theme().TextMuted)
+			})
+		})
 	})
 	errorText(c, f.err)
-	if st := m.store.Settings(); st.QuitOnClose != (f.closeAction == 1) || st.Language != languages[f.language] {
+	if st := m.store.Settings(); st.QuitOnClose != (f.closeAction == 1) || st.Language != languages[f.language] ||
+		st.CommandTarget != commandTargets[f.target] {
 		changed := st.Language != languages[f.language]
 		st.QuitOnClose, st.Language = f.closeAction == 1, languages[f.language]
+		st.CommandTarget = commandTargets[f.target]
 		if err := m.store.SetSettings(st); err != nil {
 			f.err = locales.SettingsErrSave(err.Error())
 		}

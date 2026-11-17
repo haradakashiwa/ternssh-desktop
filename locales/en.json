@@ -53,6 +53,20 @@
   },
   "close": "Close",
   "cmdAdd": "Add Quick Command",
+  "cmdAskAll": "All Sessions ({count})",
+  "@cmdAskAll": {
+    "description": "Asking where a quick command goes: every terminal connected, with how many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cmdAskCurrent": "Current Session",
+  "@cmdAskCurrent": {
+    "description": "Asking where a quick command goes: the terminal shown."
+  },
+  "cmdAskTitle": "Send “{name}” to…",
   "cmdBuiltin": "Built-in",
   "cmdCommand": "Command",
   "cmdCommandRequired": "Enter a command",
@@ -63,15 +77,26 @@
   "cmdDeleteTitle": "Delete the quick command “{name}”?",
   "cmdEditTitle": "Edit Quick Command",
   "cmdEmpty": "No quick commands yet. Click “+” at the top right to add one.",
-  "cmdHint": "Click it to run it in the current terminal; multiple lines run one by one.",
+  "cmdHint": "Click it to run it where the settings send quick commands; multiple lines run one by one.",
   "cmdName": "Name",
   "cmdNamePlaceholder": "e.g. Check disk",
   "cmdNameRequired": "Enter a name",
+  "cmdNoSessions": "No terminal is connected",
   "cmdNotConnected": "The terminal isn’t connected, so the command can’t be sent",
   "cmdPaste": "Paste into Terminal (Don’t Run)",
   "cmdRefresh": "Refresh Quick Commands",
   "cmdRun": "Run",
+  "cmdRunAll": "Run in All Sessions",
+  "cmdRunCurrent": "Run in Current Session",
   "cmdSaveToSite": "Saved to the site “{site}”; it also appears in the quick commands of the web version",
+  "cmdSentAll": "{count, plural, one {Sent to # session} other {Sent to # sessions}}",
+  "@cmdSentAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cmdSourceLocal": "Saved on this machine",
   "cmdSourceSite": "From the site “{site}”",
   "cmdTabCommands": "Quick Commands",
@@ -160,8 +185,8 @@
   "filesDeleteRemoteFolder": "This folder and everything in it will be deleted from the server. This can’t be undone.",
   "filesDeleteTitle": "Delete “{name}”?",
   "filesDownload": "Download",
-  "filesDownloaded": "Downloaded to {path}",
   "filesDownloadTo": "Download To…",
+  "filesDownloaded": "Downloaded to {path}",
   "filesEdit": "Edit",
   "@filesEdit": {
     "description": "A menu item that opens a file in the text editor."
@@ -191,8 +216,8 @@
     "description": "The accessibility label of the table of files."
   },
   "filesTransferFailed": "Failed",
-  "filesTransfers": "Transfers",
   "filesTransferWaiting": "Waiting",
+  "filesTransfers": "Transfers",
   "filesUpload": "Upload Files",
   "groupCollapseAll": "Collapse All",
   "groupConnectAll": "Connect All Servers",
@@ -207,8 +232,8 @@
   "groupDelete": "Delete Group",
   "groupDeleteConfirmMessage": "Its subgroups are deleted with it. Its servers and terminals move to the top level and are not deleted.",
   "groupDeleteConfirmTitle": "Delete the group “{name}”?",
-  "groupDeleted": "Deleted the group {name}",
   "groupDeleteFailed": "Delete failed: {error}",
+  "groupDeleted": "Deleted the group {name}",
   "groupErrMove": "Couldn’t move: {error}",
   "groupExpandAll": "Expand All",
   "groupMoveFailed": "Move failed: {error}",
@@ -281,6 +306,14 @@
   },
   "serverPassphrasePlaceholder": "Leave blank if not encrypted",
   "serverSiteHint": "The server and its credentials are saved to the site and sync to the web and your other devices. To connect, this machine gets the credentials from the site and opens SSH directly.",
+  "settingsCommandTarget": "Send Quick Commands To",
+  "@settingsCommandTarget": {
+    "description": "Settings: where a quick command clicked is sent."
+  },
+  "settingsCommandTargetAll": "All Sessions",
+  "settingsCommandTargetAsk": "Ask Each Time",
+  "settingsCommandTargetCurrent": "Current Session",
+  "settingsCommandTargetHint": "All sessions are the connected terminals of every tab. Right-click a quick command to choose for it alone.",
   "settingsErrSave": "Couldn’t save: {error}",
   "settingsGeneral": "General",
   "settingsHotkey": "Show/Hide Hotkey",
@@ -323,11 +356,11 @@
   "siteAccessCanceled": "Sign-in to Cloudflare Access was canceled",
   "siteAccessHint": "Without a service token, choose None: the site’s Cloudflare Access sign-in opens in a window when it asks. A service token needs no sign-in: create one in Zero Trust and allow it in the application’s policy (Service Auth).",
   "siteAccessRequired": "The site is behind Cloudflare Access; sign in to reach it",
+  "siteAddSubtitle": "Connect a deployed ternssh site. It becomes a tab at the top.",
+  "siteAddTitle": "Add Site",
   "siteAddressInvalid": "Invalid site address: {address}",
   "siteAddressRequired": "Enter the site address",
   "siteAddressScheme": "The site address must use http or https",
-  "siteAddSubtitle": "Connect a deployed ternssh site. It becomes a tab at the top.",
-  "siteAddTitle": "Add Site",
   "siteAuthAccess": "Access Token",
   "@siteAuthAccess": {
     "description": "A Cloudflare Access service token."
@@ -504,7 +537,6 @@
   "@viewConnectTo": {
     "description": "The accessibility label of the terminal button of a server row."
   },
-  "viewDeletedFromSite": "Deleted {name} from the site",
   "viewDeleteFailed": "Couldn’t delete: {error}",
   "viewDeleteFromSite": "Delete from Site",
   "viewDeleteFromSiteMessage": "The server and its credentials will be deleted from the site {site} and will no longer appear on the web.",
@@ -513,6 +545,7 @@
   "viewDeleteServerTitle": "Delete the server “{name}”?",
   "viewDeleteTerminalMessage": "Only this item is deleted. Files on this machine aren’t affected.",
   "viewDeleteTerminalTitle": "Delete the terminal “{name}”?",
+  "viewDeletedFromSite": "Deleted {name} from the site",
   "viewEditSite": "Edit Site…",
   "viewHomeEmpty": "No servers or local terminals yet. Click “Add Server or Terminal” below.",
   "viewHostKeyReset": "Reset the host key of {name}; it will be recorded on the next connection",

@@ -220,3 +220,67 @@ func TestLocalFiles(t *testing.T) {
 		t.Errorf("dir %q", f.dir)
 	}
 }
+
+func TestCommandTarget(t *testing.T) {
+	m, st := testModel(t)
+	withSites(t, m, st)
+	sent := typed(t)
+	m.selectSite(0)
+	m.newSession()
+	m.newSession()
+	home := m.sites[0]
+	a, b := home.sessions[0], home.sessions[1]
+	a.status, b.status = sshconn.StatusReady, sshconn.StatusReady
+	q := ternssh.QuickCommand{ID: "q", Label: "磁盘", Command: "df -h"}
+
+	// The current session, by default.
+	m.sendCommand(a, q)
+	if len(*sent) != 1 {
+		t.Fatalf("sent %q", *sent)
+	}
+
+	// Every session connected, in every tab.
+	settings := st.Settings()
+	settings.CommandTarget = store.CommandTargetAll
+	st.SetSettings(settings)
+	*sent = nil
+	m.sendCommand(a, q)
+	if len(*sent) != 2 || m.toast != "已发送到 2 个会话" {
+		t.Fatalf("sent %q, notice %q", *sent, m.toast)
+	}
+	b.status = sshconn.StatusClosed
+	*sent = nil
+	m.sendCommand(a, q)
+	if len(*sent) != 1 {
+		t.Fatalf("sent %q", *sent)
+	}
+
+	// Asked each time.
+	b.status = sshconn.StatusReady
+	settings.CommandTarget = store.CommandTargetAsk
+	st.SetSettings(settings)
+	*sent = nil
+	m.sendCommand(a, q)
+	if len(*sent) != 0 || !m.commandAskOpen {
+		t.Fatalf("sent %q, asking %v", *sent, m.commandAskOpen)
+	}
+	tt := ui.NewTester(m.View, 1100, 700)
+	if !tt.HasText("把「磁盘」发送到…") {
+		t.Fatalf("texts %q", tt.Texts())
+	}
+	snapshot(t, tt, "command-ask")
+	if err := tt.Click("全部会话（2）"); err != nil {
+		t.Fatal(err)
+	}
+	if len(*sent) != 2 || m.commandAskOpen {
+		t.Fatalf("sent %q, asking %v", *sent, m.commandAskOpen)
+	}
+	m.sendCommand(a, q)
+	tt.Frame()
+	if err := tt.Click("当前会话"); err != nil {
+		t.Fatal(err)
+	}
+	if len(*sent) != 3 || m.commandAskOpen {
+		t.Fatalf("sent %q, asking %v", *sent, m.commandAskOpen)
+	}
+}

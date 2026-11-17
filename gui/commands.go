@@ -192,11 +192,14 @@ func (m *Model) commandChip(c *ui.Context, s *siteState, sess *session, q ternss
 		chip.Background(frost(c, 0.5))
 	}
 	if chip.Clicked() {
-		m.runCommand(sess, q.Command, false)
+		m.sendCommand(sess, q)
 	}
 	chip.ContextMenu(func(menu *ui.Menu) {
-		if menu.Item(locales.CmdRun()).Chosen() {
+		if menu.Item(locales.CmdRunCurrent()).Chosen() {
 			m.runCommand(sess, q.Command, false)
+		}
+		if menu.Item(locales.CmdRunAll()).Chosen() {
+			m.runEverywhere(sess, q.Command)
 		}
 		if menu.Item(locales.CmdPaste()).Chosen() {
 			m.runCommand(sess, q.Command, true)
@@ -220,6 +223,51 @@ func (m *Model) commandChip(c *ui.Context, s *siteState, sess *session, q ternss
 	})
 }
 
+// sendCommand runs a quick command clicked where the settings say: in
+// the terminal of sess, in every terminal connected, or where the user
+// says.
+func (m *Model) sendCommand(sess *session, q ternssh.QuickCommand) {
+	switch m.store.Settings().CommandTarget {
+	case store.CommandTargetAll:
+		m.runEverywhere(sess, q.Command)
+	case store.CommandTargetAsk:
+		m.commandAsk, m.commandAskOpen = commandAsk{sess: sess, command: q}, true
+	default:
+		m.runCommand(sess, q.Command, false)
+	}
+}
+
+// connected returns the sessions of every tab whose terminal is up.
+func (m *Model) connected() []*session {
+	var out []*session
+	for _, s := range m.sites {
+		for _, sess := range s.sessions {
+			if sess.status == sshconn.StatusReady {
+				out = append(out, sess)
+			}
+		}
+	}
+	return out
+}
+
+// runEverywhere runs a command in every terminal connected, giving the
+// keyboard back to the one of sess, the one shown.
+func (m *Model) runEverywhere(sess *session, command string) {
+	text := strings.ReplaceAll(strings.ReplaceAll(command, "\r\n", "\n"), "\n", "\r") + "\r"
+	n := 0
+	for _, to := range m.connected() {
+		if input(to, text, false) {
+			n++
+		}
+	}
+	if n == 0 {
+		m.notify(locales.CmdNoSessions())
+		return
+	}
+	sess.refocus = true
+	m.notify(locales.CmdSentAll(n))
+}
+
 // runCommand sends a command to the terminal of a session, run, or
 // pasted for the user to finish and run.
 func (m *Model) runCommand(sess *session, command string, paste bool) {
@@ -237,6 +285,39 @@ func (m *Model) runCommand(sess *session, command string, paste bool) {
 		return
 	}
 	sess.refocus = true
+}
+
+// --- Asking where a command goes
+
+type commandAsk struct {
+	sess    *session // the session shown as the command was clicked
+	command ternssh.QuickCommand
+}
+
+func (m *Model) commandAskDialog(c *ui.Context) {
+	a := m.commandAsk
+	if a.sess == nil {
+		return
+	}
+	dialog(c, &m.commandAskOpen, 400, func() {
+		dialogTitle(c, locales.CmdAskTitle(a.command.Label), "")
+		ui.Text(c, a.command.Command).Font("monospace").FontSize(12).TextColor(c.Theme().TextMuted).MaxLines(6).Ellipsis("…")
+		n := len(m.connected())
+		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			if ui.Button(c, locales.Cancel()).Clicked() {
+				m.commandAskOpen = false
+			}
+			if ui.Button(c, locales.CmdAskAll(n)).Disabled(n == 0).Clicked() {
+				m.commandAskOpen = false
+				m.runEverywhere(a.sess, a.command.Command)
+			}
+			b := ui.PrimaryButton(c, locales.CmdAskCurrent()).Disabled(a.sess.status != sshconn.StatusReady)
+			if b.Clicked() || c.Shortcut(0, ui.KeyEnter) {
+				m.commandAskOpen = false
+				m.runCommand(a.sess, a.command.Command, false)
+			}
+		})
+	})
 }
 
 // --- The form of a command

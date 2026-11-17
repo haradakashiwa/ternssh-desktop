@@ -43,6 +43,7 @@ func (m *Model) View(c *ui.Context) {
 	m.groupDialog(c)
 	m.promptDialog(c)
 	m.commandDialog(c)
+	m.commandAskDialog(c)
 	m.confirmDialog(c)
 	m.settingsDialog(c)
 	m.toastView(c)

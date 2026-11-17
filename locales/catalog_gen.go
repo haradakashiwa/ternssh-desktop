@@ -280,6 +280,46 @@ func (msgs Messages) CmdAdd() string {
 	return Catalog.Format(msgs.locale, "cmdAdd", nil)
 }
 
+// CmdAskAll says "All Sessions ({count})"
+// in the language the app shows.
+//
+// Asking where a quick command goes: every terminal connected, with how
+// many.
+func CmdAskAll(count int) string { return In(i18n.Locale()).CmdAskAll(count) }
+
+// CmdAskAll says "All Sessions ({count})"
+// in the language of msgs.
+//
+// Asking where a quick command goes: every terminal connected, with how
+// many.
+func (msgs Messages) CmdAskAll(count int) string {
+	return Catalog.Format(msgs.locale, "cmdAskAll", map[string]any{"count": count})
+}
+
+// CmdAskCurrent says "Current Session"
+// in the language the app shows.
+//
+// Asking where a quick command goes: the terminal shown.
+func CmdAskCurrent() string { return In(i18n.Locale()).CmdAskCurrent() }
+
+// CmdAskCurrent says "Current Session"
+// in the language of msgs.
+//
+// Asking where a quick command goes: the terminal shown.
+func (msgs Messages) CmdAskCurrent() string {
+	return Catalog.Format(msgs.locale, "cmdAskCurrent", nil)
+}
+
+// CmdAskTitle says "Send “{name}” to…"
+// in the language the app shows.
+func CmdAskTitle(name string) string { return In(i18n.Locale()).CmdAskTitle(name) }
+
+// CmdAskTitle says "Send “{name}” to…"
+// in the language of msgs.
+func (msgs Messages) CmdAskTitle(name string) string {
+	return Catalog.Format(msgs.locale, "cmdAskTitle", map[string]any{"name": name})
+}
+
 // CmdBuiltin says "Built-in"
 // in the language the app shows.
 func CmdBuiltin() string { return In(i18n.Locale()).CmdBuiltin() }
@@ -380,11 +420,11 @@ func (msgs Messages) CmdEmpty() string {
 	return Catalog.Format(msgs.locale, "cmdEmpty", nil)
 }
 
-// CmdHint says "Click it to run it in the current terminal; multiple lines run one by one."
+// CmdHint says "Click it to run it where the settings send quick commands; multiple lines run one by one."
 // in the language the app shows.
 func CmdHint() string { return In(i18n.Locale()).CmdHint() }
 
-// CmdHint says "Click it to run it in the current terminal; multiple lines run one by one."
+// CmdHint says "Click it to run it where the settings send quick commands; multiple lines run one by one."
 // in the language of msgs.
 func (msgs Messages) CmdHint() string {
 	return Catalog.Format(msgs.locale, "cmdHint", nil)
@@ -418,6 +458,16 @@ func CmdNameRequired() string { return In(i18n.Locale()).CmdNameRequired() }
 // in the language of msgs.
 func (msgs Messages) CmdNameRequired() string {
 	return Catalog.Format(msgs.locale, "cmdNameRequired", nil)
+}
+
+// CmdNoSessions says "No terminal is connected"
+// in the language the app shows.
+func CmdNoSessions() string { return In(i18n.Locale()).CmdNoSessions() }
+
+// CmdNoSessions says "No terminal is connected"
+// in the language of msgs.
+func (msgs Messages) CmdNoSessions() string {
+	return Catalog.Format(msgs.locale, "cmdNoSessions", nil)
 }
 
 // CmdNotConnected says "The terminal isn’t connected, so the command can’t be sent"
@@ -460,6 +510,26 @@ func (msgs Messages) CmdRun() string {
 	return Catalog.Format(msgs.locale, "cmdRun", nil)
 }
 
+// CmdRunAll says "Run in All Sessions"
+// in the language the app shows.
+func CmdRunAll() string { return In(i18n.Locale()).CmdRunAll() }
+
+// CmdRunAll says "Run in All Sessions"
+// in the language of msgs.
+func (msgs Messages) CmdRunAll() string {
+	return Catalog.Format(msgs.locale, "cmdRunAll", nil)
+}
+
+// CmdRunCurrent says "Run in Current Session"
+// in the language the app shows.
+func CmdRunCurrent() string { return In(i18n.Locale()).CmdRunCurrent() }
+
+// CmdRunCurrent says "Run in Current Session"
+// in the language of msgs.
+func (msgs Messages) CmdRunCurrent() string {
+	return Catalog.Format(msgs.locale, "cmdRunCurrent", nil)
+}
+
 // CmdSaveToSite says "Saved to the site “{site}”; it also appears in the quick commands of the web version"
 // in the language the app shows.
 func CmdSaveToSite(site string) string { return In(i18n.Locale()).CmdSaveToSite(site) }
@@ -468,6 +538,16 @@ func CmdSaveToSite(site string) string { return In(i18n.Locale()).CmdSaveToSite(
 // in the language of msgs.
 func (msgs Messages) CmdSaveToSite(site string) string {
 	return Catalog.Format(msgs.locale, "cmdSaveToSite", map[string]any{"site": site})
+}
+
+// CmdSentAll says "{count, plural, one {Sent to # session} other {Sent to # sessions}}"
+// in the language the app shows.
+func CmdSentAll(count int) string { return In(i18n.Locale()).CmdSentAll(count) }
+
+// CmdSentAll says "{count, plural, one {Sent to # session} other {Sent to # sessions}}"
+// in the language of msgs.
+func (msgs Messages) CmdSentAll(count int) string {
+	return Catalog.Format(msgs.locale, "cmdSentAll", map[string]any{"count": count})
 }
 
 // CmdSourceLocal says "Saved on this machine"
@@ -1006,16 +1086,6 @@ func (msgs Messages) FilesDownload() string {
 	return Catalog.Format(msgs.locale, "filesDownload", nil)
 }
 
-// FilesDownloaded says "Downloaded to {path}"
-// in the language the app shows.
-func FilesDownloaded(path string) string { return In(i18n.Locale()).FilesDownloaded(path) }
-
-// FilesDownloaded says "Downloaded to {path}"
-// in the language of msgs.
-func (msgs Messages) FilesDownloaded(path string) string {
-	return Catalog.Format(msgs.locale, "filesDownloaded", map[string]any{"path": path})
-}
-
 // FilesDownloadTo says "Download To…"
 // in the language the app shows.
 func FilesDownloadTo() string { return In(i18n.Locale()).FilesDownloadTo() }
@@ -1024,6 +1094,16 @@ func FilesDownloadTo() string { return In(i18n.Locale()).FilesDownloadTo() }
 // in the language of msgs.
 func (msgs Messages) FilesDownloadTo() string {
 	return Catalog.Format(msgs.locale, "filesDownloadTo", nil)
+}
+
+// FilesDownloaded says "Downloaded to {path}"
+// in the language the app shows.
+func FilesDownloaded(path string) string { return In(i18n.Locale()).FilesDownloaded(path) }
+
+// FilesDownloaded says "Downloaded to {path}"
+// in the language of msgs.
+func (msgs Messages) FilesDownloaded(path string) string {
+	return Catalog.Format(msgs.locale, "filesDownloaded", map[string]any{"path": path})
 }
 
 // FilesEdit says "Edit"
@@ -1238,16 +1318,6 @@ func (msgs Messages) FilesTransferFailed() string {
 	return Catalog.Format(msgs.locale, "filesTransferFailed", nil)
 }
 
-// FilesTransfers says "Transfers"
-// in the language the app shows.
-func FilesTransfers() string { return In(i18n.Locale()).FilesTransfers() }
-
-// FilesTransfers says "Transfers"
-// in the language of msgs.
-func (msgs Messages) FilesTransfers() string {
-	return Catalog.Format(msgs.locale, "filesTransfers", nil)
-}
-
 // FilesTransferWaiting says "Waiting"
 // in the language the app shows.
 func FilesTransferWaiting() string { return In(i18n.Locale()).FilesTransferWaiting() }
@@ -1256,6 +1326,16 @@ func FilesTransferWaiting() string { return In(i18n.Locale()).FilesTransferWaiti
 // in the language of msgs.
 func (msgs Messages) FilesTransferWaiting() string {
 	return Catalog.Format(msgs.locale, "filesTransferWaiting", nil)
+}
+
+// FilesTransfers says "Transfers"
+// in the language the app shows.
+func FilesTransfers() string { return In(i18n.Locale()).FilesTransfers() }
+
+// FilesTransfers says "Transfers"
+// in the language of msgs.
+func (msgs Messages) FilesTransfers() string {
+	return Catalog.Format(msgs.locale, "filesTransfers", nil)
 }
 
 // FilesUpload says "Upload Files"
@@ -1350,16 +1430,6 @@ func (msgs Messages) GroupDeleteConfirmTitle(name string) string {
 	return Catalog.Format(msgs.locale, "groupDeleteConfirmTitle", map[string]any{"name": name})
 }
 
-// GroupDeleted says "Deleted the group {name}"
-// in the language the app shows.
-func GroupDeleted(name string) string { return In(i18n.Locale()).GroupDeleted(name) }
-
-// GroupDeleted says "Deleted the group {name}"
-// in the language of msgs.
-func (msgs Messages) GroupDeleted(name string) string {
-	return Catalog.Format(msgs.locale, "groupDeleted", map[string]any{"name": name})
-}
-
 // GroupDeleteFailed says "Delete failed: {error}"
 // in the language the app shows.
 func GroupDeleteFailed(error string) string { return In(i18n.Locale()).GroupDeleteFailed(error) }
@@ -1368,6 +1438,16 @@ func GroupDeleteFailed(error string) string { return In(i18n.Locale()).GroupDele
 // in the language of msgs.
 func (msgs Messages) GroupDeleteFailed(error string) string {
 	return Catalog.Format(msgs.locale, "groupDeleteFailed", map[string]any{"error": error})
+}
+
+// GroupDeleted says "Deleted the group {name}"
+// in the language the app shows.
+func GroupDeleted(name string) string { return In(i18n.Locale()).GroupDeleted(name) }
+
+// GroupDeleted says "Deleted the group {name}"
+// in the language of msgs.
+func (msgs Messages) GroupDeleted(name string) string {
+	return Catalog.Format(msgs.locale, "groupDeleted", map[string]any{"name": name})
 }
 
 // GroupErrMove says "Couldn’t move: {error}"
@@ -1950,6 +2030,60 @@ func (msgs Messages) ServerSiteHint() string {
 	return Catalog.Format(msgs.locale, "serverSiteHint", nil)
 }
 
+// SettingsCommandTarget says "Send Quick Commands To"
+// in the language the app shows.
+//
+// Settings: where a quick command clicked is sent.
+func SettingsCommandTarget() string { return In(i18n.Locale()).SettingsCommandTarget() }
+
+// SettingsCommandTarget says "Send Quick Commands To"
+// in the language of msgs.
+//
+// Settings: where a quick command clicked is sent.
+func (msgs Messages) SettingsCommandTarget() string {
+	return Catalog.Format(msgs.locale, "settingsCommandTarget", nil)
+}
+
+// SettingsCommandTargetAll says "All Sessions"
+// in the language the app shows.
+func SettingsCommandTargetAll() string { return In(i18n.Locale()).SettingsCommandTargetAll() }
+
+// SettingsCommandTargetAll says "All Sessions"
+// in the language of msgs.
+func (msgs Messages) SettingsCommandTargetAll() string {
+	return Catalog.Format(msgs.locale, "settingsCommandTargetAll", nil)
+}
+
+// SettingsCommandTargetAsk says "Ask Each Time"
+// in the language the app shows.
+func SettingsCommandTargetAsk() string { return In(i18n.Locale()).SettingsCommandTargetAsk() }
+
+// SettingsCommandTargetAsk says "Ask Each Time"
+// in the language of msgs.
+func (msgs Messages) SettingsCommandTargetAsk() string {
+	return Catalog.Format(msgs.locale, "settingsCommandTargetAsk", nil)
+}
+
+// SettingsCommandTargetCurrent says "Current Session"
+// in the language the app shows.
+func SettingsCommandTargetCurrent() string { return In(i18n.Locale()).SettingsCommandTargetCurrent() }
+
+// SettingsCommandTargetCurrent says "Current Session"
+// in the language of msgs.
+func (msgs Messages) SettingsCommandTargetCurrent() string {
+	return Catalog.Format(msgs.locale, "settingsCommandTargetCurrent", nil)
+}
+
+// SettingsCommandTargetHint says "All sessions are the connected terminals of every tab. Right-click a quick command to choose for it alone."
+// in the language the app shows.
+func SettingsCommandTargetHint() string { return In(i18n.Locale()).SettingsCommandTargetHint() }
+
+// SettingsCommandTargetHint says "All sessions are the connected terminals of every tab. Right-click a quick command to choose for it alone."
+// in the language of msgs.
+func (msgs Messages) SettingsCommandTargetHint() string {
+	return Catalog.Format(msgs.locale, "settingsCommandTargetHint", nil)
+}
+
 // SettingsErrSave says "Couldn’t save: {error}"
 // in the language the app shows.
 func SettingsErrSave(error string) string { return In(i18n.Locale()).SettingsErrSave(error) }
@@ -2220,6 +2354,26 @@ func (msgs Messages) SiteAccessRequired() string {
 	return Catalog.Format(msgs.locale, "siteAccessRequired", nil)
 }
 
+// SiteAddSubtitle says "Connect a deployed ternssh site. It becomes a tab at the top."
+// in the language the app shows.
+func SiteAddSubtitle() string { return In(i18n.Locale()).SiteAddSubtitle() }
+
+// SiteAddSubtitle says "Connect a deployed ternssh site. It becomes a tab at the top."
+// in the language of msgs.
+func (msgs Messages) SiteAddSubtitle() string {
+	return Catalog.Format(msgs.locale, "siteAddSubtitle", nil)
+}
+
+// SiteAddTitle says "Add Site"
+// in the language the app shows.
+func SiteAddTitle() string { return In(i18n.Locale()).SiteAddTitle() }
+
+// SiteAddTitle says "Add Site"
+// in the language of msgs.
+func (msgs Messages) SiteAddTitle() string {
+	return Catalog.Format(msgs.locale, "siteAddTitle", nil)
+}
+
 // SiteAddressInvalid says "Invalid site address: {address}"
 // in the language the app shows.
 func SiteAddressInvalid(address string) string { return In(i18n.Locale()).SiteAddressInvalid(address) }
@@ -2248,26 +2402,6 @@ func SiteAddressScheme() string { return In(i18n.Locale()).SiteAddressScheme() }
 // in the language of msgs.
 func (msgs Messages) SiteAddressScheme() string {
 	return Catalog.Format(msgs.locale, "siteAddressScheme", nil)
-}
-
-// SiteAddSubtitle says "Connect a deployed ternssh site. It becomes a tab at the top."
-// in the language the app shows.
-func SiteAddSubtitle() string { return In(i18n.Locale()).SiteAddSubtitle() }
-
-// SiteAddSubtitle says "Connect a deployed ternssh site. It becomes a tab at the top."
-// in the language of msgs.
-func (msgs Messages) SiteAddSubtitle() string {
-	return Catalog.Format(msgs.locale, "siteAddSubtitle", nil)
-}
-
-// SiteAddTitle says "Add Site"
-// in the language the app shows.
-func SiteAddTitle() string { return In(i18n.Locale()).SiteAddTitle() }
-
-// SiteAddTitle says "Add Site"
-// in the language of msgs.
-func (msgs Messages) SiteAddTitle() string {
-	return Catalog.Format(msgs.locale, "siteAddTitle", nil)
 }
 
 // SiteAuthAccess says "Access Token"
@@ -3212,16 +3346,6 @@ func (msgs Messages) ViewConnectTo(name string) string {
 	return Catalog.Format(msgs.locale, "viewConnectTo", map[string]any{"name": name})
 }
 
-// ViewDeletedFromSite says "Deleted {name} from the site"
-// in the language the app shows.
-func ViewDeletedFromSite(name string) string { return In(i18n.Locale()).ViewDeletedFromSite(name) }
-
-// ViewDeletedFromSite says "Deleted {name} from the site"
-// in the language of msgs.
-func (msgs Messages) ViewDeletedFromSite(name string) string {
-	return Catalog.Format(msgs.locale, "viewDeletedFromSite", map[string]any{"name": name})
-}
-
 // ViewDeleteFailed says "Couldn’t delete: {error}"
 // in the language the app shows.
 func ViewDeleteFailed(error string) string { return In(i18n.Locale()).ViewDeleteFailed(error) }
@@ -3306,6 +3430,16 @@ func ViewDeleteTerminalTitle(name string) string {
 // in the language of msgs.
 func (msgs Messages) ViewDeleteTerminalTitle(name string) string {
 	return Catalog.Format(msgs.locale, "viewDeleteTerminalTitle", map[string]any{"name": name})
+}
+
+// ViewDeletedFromSite says "Deleted {name} from the site"
+// in the language the app shows.
+func ViewDeletedFromSite(name string) string { return In(i18n.Locale()).ViewDeletedFromSite(name) }
+
+// ViewDeletedFromSite says "Deleted {name} from the site"
+// in the language of msgs.
+func (msgs Messages) ViewDeletedFromSite(name string) string {
+	return Catalog.Format(msgs.locale, "viewDeletedFromSite", map[string]any{"name": name})
 }
 
 // ViewEditSite says "Edit Site…"

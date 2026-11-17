@@ -317,6 +317,15 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 			cols := []ui.TableColumn{{Title: locales.FilesName()}, {Title: locales.FilesColumnSize(), Width: 70, Align: ui.End}, {Title: locales.FilesColumnModified(), Width: 96}}
 			table := ui.Table(c, &f.list, cols, len(f.entries), func(row, col int) {
 				e := f.entries[row]
+				// The chosen row is painted in the accent with its own text
+				// color, which the icon and the muted columns take too: gray
+				// or green on the green would not read.
+				chosen := row == f.selected
+				tint := func(el ui.Element, color ui.Color) {
+					if !chosen {
+						el.TextColor(color)
+					}
+				}
 				switch col {
 				case 0:
 					ui.Row(c).Gap(6).AlignItems(ui.Center).MinWidth(0).Children(func() {
@@ -324,15 +333,15 @@ func (m *Model) filesPanel(c *ui.Context, sess *session) {
 						if e.Dir {
 							svg, color = folderIcon, accentInk(c)
 						}
-						ui.Icon(c, svg).Size(14, 14).TextColor(color).Shrink(0)
+						tint(ui.Icon(c, svg).Size(14, 14).Shrink(0), color)
 						ui.Text(c, e.Name).FontSize(12).SingleLine().MinWidth(0)
 					})
 				case 1:
 					if !e.Dir {
-						ui.Text(c, formatBytes(uint64(e.Size()))).FontSize(11).TextColor(t.TextMuted).SingleLine()
+						tint(ui.Text(c, formatBytes(uint64(e.Size()))).FontSize(11).SingleLine(), t.TextMuted)
 					}
 				case 2:
-					ui.Text(c, formatTime(e.ModTime())).FontSize(11).TextColor(t.TextMuted).SingleLine()
+					tint(ui.Text(c, formatTime(e.ModTime())).FontSize(11).SingleLine(), t.TextMuted)
 				}
 			}).Grow(1).MinHeight(0).Label(locales.FilesTable())
 			if table.Submitted() && f.selected >= 0 && f.selected < len(f.entries) {

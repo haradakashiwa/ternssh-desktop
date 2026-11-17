@@ -72,9 +72,9 @@ func (h *highlighter) languageOptions() []string {
 func (h *highlighter) setLanguage(lang string) {
 	h.lang, h.lexer, h.ranges, h.version = lang, nil, nil, 0
 	if lang != plainText {
-		if l := lexers.Get(lang); l != nil {
-			h.lexer = chroma.Coalesce(l)
-		}
+		// Not coalesced: a token not in the text, which lex leaves out,
+		// would take the next with it. lex joins runs of a style itself.
+		h.lexer = lexers.Get(lang)
 	}
 }
 
@@ -87,22 +87,30 @@ func styleFor(dark bool) *chroma.Style {
 }
 
 // lex returns the ranges of text to color, in runes, as style colors them.
+//
+// The tokens are found in the text rather than counted: a lexer's tokens
+// need not spell it out, as chroma's own CRLF to LF, or its YAML lexer's
+// indent of a block scalar given twice, and a count would shift every
+// range after.
 func lex(lexer chroma.Lexer, style *chroma.Style, text string) []ui.TextRange {
 	it, err := lexer.Tokenise(nil, text)
 	if err != nil {
 		return nil
 	}
 	base := style.Get(chroma.Text)
-	total := utf8.RuneCountInString(text)
 	var ranges []ui.TextRange
-	pos := 0
+	at, pos := 0, 0 // in bytes and runes
 	for tok := it(); tok != chroma.EOF; tok = it() {
-		n := utf8.RuneCountInString(tok.Value)
-		start, end := pos, min(pos+n, total)
-		pos += n
-		if end <= start {
+		end, n, ok := follow(text, at, tok.Value)
+		if !ok {
+			continue // not in the text
+		}
+		start := pos
+		at, pos = end, pos+n
+		if pos <= start {
 			continue
 		}
+		end = pos
 		entry := style.Get(tok.Type)
 		bold := entry.Bold == chroma.Yes
 		if !entry.Colour.IsSet() || (entry.Colour == base.Colour && !bold) {
@@ -120,6 +128,24 @@ func lex(lexer chroma.Lexer, style *chroma.Style, text string) []ui.TextRange {
 		ranges = append(ranges, r)
 	}
 	return ranges
+}
+
+// follow reports whether text from byte at goes on with value, but for the
+// CRs before its LFs a lexer drops, and where it ends then, in bytes, and
+// how many runes it takes.
+func follow(text string, at int, value string) (end, runes int, ok bool) {
+	i := at
+	for j := 0; j < len(value); {
+		switch {
+		case i < len(text) && text[i] == value[j]:
+			i, j = i+1, j+1
+		case i+1 < len(text) && text[i] == '\r' && text[i+1] == '\n' && value[j] == '\n':
+			i++
+		default:
+			return at, 0, false
+		}
+	}
+	return i, utf8.RuneCountInString(text[at:i]), true
 }
 
 // highlight returns the ranges of an editor's text, lexing it again as it

@@ -3,8 +3,11 @@ package gui
 import (
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
+	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/egoist/mygo/ui"
 
 	"ternssh-desktop/internal/sshconn"
@@ -73,5 +76,27 @@ func TestHighlight(t *testing.T) {
 	tt.Frame()
 	if e.hl.lexer != nil || len(e.highlight(false)) != 0 {
 		t.Error("plain text highlighted")
+	}
+}
+
+// The ranges stay on the text past what a lexer does not spell out as it
+// is: a YAML block scalar, and CRLF.
+func TestHighlightAligned(t *testing.T) {
+	src := "# 配置\nenv: |\n  A=1\n  B=2\nimage: nginx # 注释\n"
+	for _, text := range []string{src, strings.ReplaceAll(src, "\n", "\r\n")} {
+		runes := []rune(text)
+		ranges := lex(lexers.Get("YAML"), styleFor(false), text)
+		var colored []string
+		for _, r := range ranges {
+			if r.End > len(runes) {
+				t.Fatalf("range %v past the text", r)
+			}
+			colored = append(colored, strings.TrimSpace(string(runes[r.Start:r.End])))
+		}
+		for _, want := range []string{"# 配置", "image", "# 注释"} {
+			if !slices.Contains(colored, want) {
+				t.Errorf("crlf %v: %q not a range of %q", strings.Contains(text, "\r"), want, colored)
+			}
+		}
 	}
 }

@@ -3,8 +3,9 @@
 #
 #   git tag v0.2.0 && git push origin v0.2.0
 #
-# macOS builds a universal .dmg, and cross-compiles the Windows apps, whose
-# installers NSIS makes. Neither is signed with a developer certificate.
+# macOS builds a universal .dmg, to which scripts/dmg.sh gives its
+# background, and cross-compiles the Windows apps, whose installers NSIS
+# makes. Neither is signed with a developer certificate.
 
 name: Release
 
@@ -45,6 +46,9 @@ jobs:
 
       - name: Build
         run: go tool mygo build -platform darwin/universal,windows/amd64,windows/arm64
+
+      - name: Give the disk image its background
+        run: scripts/dmg.sh build/darwin-universal
 
       - name: Package
         run: |

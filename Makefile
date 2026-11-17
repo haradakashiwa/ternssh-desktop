@@ -7,7 +7,8 @@
 #   make windows        # amd64 + arm64: exe and installer in build/windows-*/
 #   make windows-x64    # amd64 only
 #   make windows-arm64  # arm64 only
-#   make mac            # .app + .dmg for this Mac
+#   make mac            # .app + .dmg for this Mac, with its background
+#   make dmg-background # render resources/dmg-background.svg (needs rsvg-convert)
 #   make test           # tests, and the Windows build check
 #
 # Windows builds are cross-compiled from any OS (no cgo); the installers
@@ -29,7 +30,7 @@ else
 HOST := linux
 endif
 
-.PHONY: dev dev-mac dev-windows dev-linux windows windows-x64 windows-arm64 mac test vet clean
+.PHONY: dev dev-mac dev-windows dev-linux windows windows-x64 windows-arm64 mac dmg-background test vet clean
 
 dev: dev-$(HOST)
 
@@ -55,6 +56,12 @@ windows-arm64:
 
 mac:
 	$(MYGO) build
+	scripts/dmg.sh build/darwin-$(shell go env GOARCH)
+
+# The disk image's background, at 1x and 2x: see scripts/dmg.sh.
+dmg-background:
+	rsvg-convert resources/dmg-background.svg -o resources/dmg-background.png
+	rsvg-convert -z 2 resources/dmg-background.svg -o resources/dmg-background@2x.png
 
 vet:
 	go vet ./...

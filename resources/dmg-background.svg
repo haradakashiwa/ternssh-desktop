@@ -1,12 +1,14 @@
 <!--
-  The background of the macOS disk image's window, 660×400 points, with the
-  app's icon at (170, 180) and Applications at (490, 180): see
-  scripts/dmg.py. scripts/dmg.sh renders it, at 1× and 2×.
+  The background of the macOS disk image's window, with the app's icon at
+  (170, 180) and Applications at (490, 180): see scripts/dmg_settings.py.
+  It is 660×428 points, for a window of 660×400 under its title bar, or as
+  tall: what shows is in the top 400. `make dmg-background` renders it to
+  dmg-background.png and @2x.png.
 
   The swallow is the icon's, in icon.png: its red, 0 in the green and 1 in
   the white of the bird, is made its alpha.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="660" height="400" viewBox="0 0 660 400">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="660" height="428" viewBox="0 0 660 428">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#fbfdfc"/>
@@ -19,13 +21,13 @@
                                            1 0 0 0 0"/>
     </filter>
     <!-- The path breaks around the swallow. -->
-    <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="660" height="400">
-      <rect width="660" height="400" fill="#fff"/>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="660" height="428">
+      <rect width="660" height="428" fill="#fff"/>
       <circle cx="330" cy="125" r="24" fill="#000"/>
     </mask>
   </defs>
 
-  <rect width="660" height="400" fill="url(#bg)"/>
+  <rect width="660" height="428" fill="url(#bg)"/>
 
   <!-- The flight, from the app to Applications. -->
   <g fill="none" stroke="#00805a" stroke-linecap="round" stroke-linejoin="round">

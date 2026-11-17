@@ -12,11 +12,23 @@ import (
 
 // settingsForm is the state of the settings dialog.
 type settingsForm struct {
-	recording   bool // waiting for the keys of the hotkey
+	tab int // settingsGeneral or settingsShortcuts
+	// recording is what the keys pressed become: hotkeyID for the
+	// hotkey, or the ID of an action of the window; "" while none is.
+	recording   string
 	err         string
 	closeAction int // 0 keeps the app in the tray, 1 quits
 	language    int // of languages
 }
+
+// The tabs of the settings.
+const (
+	settingsGeneral = iota
+	settingsShortcuts
+)
+
+// hotkeyID is the hotkey's in settingsForm.recording.
+const hotkeyID = "hotkey"
 
 // languages are the languages the app is written in, by tag: "" follows
 // the system's.
@@ -54,36 +66,22 @@ func minimizeLabel() string {
 func (m *Model) settingsDialog(c *ui.Context) {
 	f := &m.settings
 	if !m.settingsOpen {
-		if f.recording { // closed while recording
+		if f.recording != "" { // closed while recording
 			m.stopRecording()
 		}
 		return
 	}
-	dialog(c, &m.settingsOpen, 460, func() {
+	dialog(c, &m.settingsOpen, 500, func() {
 		dialogTitle(c, locales.SettingsTitle(), "")
-		ui.Field(c, locales.SettingsHotkey(), func() {
-			ui.Column(c).Gap(6).Children(func() {
-				m.hotkeyField(c)
-				ui.Text(c, locales.SettingsHotkeyHint()).
-					FontSize(11).TextColor(c.Theme().TextMuted)
-				errorText(c, f.err)
-			})
-		})
-		ui.Field(c, locales.SettingsOnClose(), func() {
-			ui.Segmented(c, &f.closeAction, minimizeLabel(), locales.SettingsQuitApp()).Label(locales.SettingsOnClose())
-		})
-		ui.Field(c, locales.SettingsLanguage(), func() {
-			ui.Segmented(c, &f.language, languageLabels()...).Label(locales.SettingsLanguage())
-		})
-		if st := m.store.Settings(); st.QuitOnClose != (f.closeAction == 1) || st.Language != languages[f.language] {
-			changed := st.Language != languages[f.language]
-			st.QuitOnClose, st.Language = f.closeAction == 1, languages[f.language]
-			if err := m.store.SetSettings(st); err != nil {
-				f.err = locales.SettingsErrSave(err.Error())
-			}
-			if changed && m.backend.SetLanguage != nil {
-				m.backend.SetLanguage(st.Language)
-			}
+		if ui.Tabs(c, &f.tab, locales.SettingsGeneral(), locales.SettingsShortcuts()).Changed() {
+			m.stopRecording()
+			f.err = ""
+		}
+		switch f.tab {
+		case settingsGeneral:
+			m.generalSettings(c)
+		case settingsShortcuts:
+			m.shortcutSettings(c)
 		}
 		ui.Row(c).Justify(ui.End).Children(func() {
 			if ui.PrimaryButton(c, locales.Done()).Clicked() {
@@ -94,61 +92,128 @@ func (m *Model) settingsDialog(c *ui.Context) {
 	})
 }
 
-// hotkeyField shows the hotkey, and records another once clicked.
-func (m *Model) hotkeyField(c *ui.Context) {
+// choose is a drop-down of labels, whose index *i is the one chosen.
+func choose(c *ui.Context, i *int, label string, labels []string) {
+	chosen := labels[*i]
+	ui.Select(c, &chosen, labels).Label(label)
+	for j, l := range labels {
+		if l == chosen {
+			*i = j
+		}
+	}
+}
+
+func (m *Model) generalSettings(c *ui.Context) {
+	f := &m.settings
+	ui.Form(c, func() {
+		ui.Field(c, locales.SettingsOnClose(), func() {
+			choose(c, &f.closeAction, locales.SettingsOnClose(), []string{minimizeLabel(), locales.SettingsQuitApp()})
+		})
+		ui.Field(c, locales.SettingsLanguage(), func() {
+			choose(c, &f.language, locales.SettingsLanguage(), languageLabels())
+		})
+	})
+	errorText(c, f.err)
+	if st := m.store.Settings(); st.QuitOnClose != (f.closeAction == 1) || st.Language != languages[f.language] {
+		changed := st.Language != languages[f.language]
+		st.QuitOnClose, st.Language = f.closeAction == 1, languages[f.language]
+		if err := m.store.SetSettings(st); err != nil {
+			f.err = locales.SettingsErrSave(err.Error())
+		}
+		if changed && m.backend.SetLanguage != nil {
+			m.backend.SetLanguage(st.Language)
+		}
+	}
+}
+
+func (m *Model) shortcutSettings(c *ui.Context) {
 	t := c.Theme()
 	f := &m.settings
-	hotkey := m.store.Settings().Hotkey
-	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-		box := ui.ButtonBase(c).Grow(1).Height(30).Padding(0, 10).Radius(t.Radius).
-			AlignItems(ui.Center).Label(locales.HotkeyFieldLabel()).Background(t.Surface).Border(1, t.Border)
-		if f.recording {
-			box.Border(1, t.Accent).Focus().HandleInput(m.recordKey)
-		} else if box.Clicked() {
-			m.startRecording()
-		}
-		box.Children(func() {
-			switch {
-			case f.recording:
-				ui.Text(c, locales.HotkeyRecording()).TextColor(accentInk(c))
-			case hotkey == "":
-				ui.Text(c, locales.HotkeyNotSet()).TextColor(t.TextMuted)
-			default:
-				ui.Text(c, hotkeyLabel(hotkey)).Bold()
-			}
+	ui.Form(c, func() {
+		ui.Field(c, locales.SettingsHotkey(), func() {
+			ui.Column(c).Gap(6).Children(func() {
+				m.hotkeyField(c, hotkeyID, locales.HotkeyFieldLabel(), m.store.Settings().Hotkey)
+				ui.Text(c, locales.SettingsHotkeyHint()).
+					FontSize(11).TextColor(t.TextMuted)
+			})
 		})
-		switch {
-		case f.recording:
-			if ui.Button(c, locales.Cancel()).Clicked() {
-				m.stopRecording()
-			}
-		case hotkey != "":
-			if ui.Button(c, locales.HotkeyClear()).Clicked() {
-				m.setHotkey("")
+		for _, a := range shortcutActions {
+			ui.Field(c, a.label(), func() {
+				m.hotkeyField(c, a.id, locales.ShortcutFieldLabel(a.label()), m.shortcut(a.id))
+			})
+		}
+	})
+	errorText(c, f.err)
+	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, locales.ShortcutSettingsHint(hotkeyLabel(settingsShortcut))).
+			FontSize(11).TextColor(t.TextMuted).Grow(1).MinWidth(0)
+		if ui.Button(c, locales.ShortcutReset()).Clicked() {
+			m.stopRecording()
+			f.err = ""
+			if err := m.store.ResetShortcuts(); err != nil {
+				f.err = locales.SettingsErrSave(err.Error())
 			}
 		}
 	})
 }
 
-// startRecording waits for the keys of a hotkey, without the one set,
-// which would otherwise hide the window as it is pressed again.
-func (m *Model) startRecording() {
-	m.settings.recording, m.settings.err = true, ""
+// hotkeyField shows the shortcut acc of id, the hotkey or an action of
+// the window, and records another once clicked.
+func (m *Model) hotkeyField(c *ui.Context, id, label, acc string) {
+	t := c.Theme()
+	f := &m.settings
+	recording := f.recording == id
+	ui.Row(c).Key("hk:" + id).Gap(8).AlignItems(ui.Center).Children(func() {
+		box := ui.ButtonBase(c).Grow(1).Height(30).Padding(0, 10).Radius(t.Radius).
+			AlignItems(ui.Center).Label(label).Background(t.Surface).Border(1, t.Border)
+		if recording {
+			box.Border(1, t.Accent).Focus().HandleInput(m.recordKey)
+		} else if box.Clicked() {
+			m.startRecording(id)
+		}
+		box.Children(func() {
+			switch {
+			case recording:
+				ui.Text(c, locales.HotkeyRecording()).TextColor(accentInk(c))
+			case acc == "":
+				ui.Text(c, locales.HotkeyNotSet()).TextColor(t.TextMuted)
+			default:
+				ui.Text(c, hotkeyLabel(acc)).Bold()
+			}
+		})
+		switch {
+		case recording:
+			if ui.Button(c, locales.Cancel()).Clicked() {
+				m.stopRecording()
+			}
+		case acc != "":
+			if ui.Button(c, locales.HotkeyClear()).Label(locales.HotkeyClearLabel(label)).Clicked() {
+				m.setShortcut(id, "")
+			}
+		}
+	})
+}
+
+// startRecording waits for the keys of the shortcut of id, without the
+// hotkey set, which would otherwise hide the window as it is pressed.
+func (m *Model) startRecording(id string) {
+	m.stopRecording()
+	m.settings.recording, m.settings.err = id, ""
 	m.registerHotkey("")
 }
 
 // stopRecording stops waiting and puts the hotkey set back.
 func (m *Model) stopRecording() {
-	if !m.settings.recording {
+	if m.settings.recording == "" {
 		return
 	}
-	m.settings.recording = false
+	m.settings.recording = ""
 	if err := m.registerHotkey(m.store.Settings().Hotkey); err != nil {
 		m.settings.err = err.Error()
 	}
 }
 
-// recordKey takes the keys while the hotkey is recorded: Escape cancels,
+// recordKey takes the keys while a shortcut is recorded: Escape cancels,
 // Backspace clears it, and a key with modifiers becomes it.
 func (m *Model) recordKey(ev ui.InputEvent) bool {
 	switch ev.Kind {
@@ -161,13 +226,14 @@ func (m *Model) recordKey(ev ui.InputEvent) bool {
 	if ev.Repeat {
 		return true
 	}
+	id := m.settings.recording
 	switch {
 	case ev.Mods == 0 && ev.Key == ui.KeyEscape:
 		m.stopRecording()
 		return true
 	case ev.Mods == 0 && (ev.Key == ui.KeyBackspace || ev.Key == ui.KeyDelete):
-		m.settings.recording = false
-		m.setHotkey("")
+		m.stopRecording()
+		m.setShortcut(id, "")
 		return true
 	}
 	name := keyName(ev.Key)
@@ -181,21 +247,49 @@ func (m *Model) recordKey(ev ui.InputEvent) bool {
 		m.settings.err = locales.HotkeyErrModifier(modifierHint())
 		return true
 	}
-	m.settings.recording = false
-	m.setHotkey(hotkeyString(ev.Mods, name))
+	acc := hotkeyString(ev.Mods, name)
+	if other := m.shortcutUsing(acc, id); other != "" {
+		m.settings.err = locales.ShortcutErrTaken(hotkeyLabel(acc), other)
+		return true
+	}
+	m.stopRecording()
+	m.setShortcut(id, acc)
 	return true
 }
 
-// setHotkey registers acc, empty for none, and saves it once registered.
-func (m *Model) setHotkey(acc string) {
+// shortcutUsing names what has the shortcut acc but id, "" for none.
+func (m *Model) shortcutUsing(acc, id string) string {
+	if id != hotkeyID && m.store.Settings().Hotkey == acc {
+		return locales.SettingsHotkey()
+	}
+	for _, a := range shortcutActions {
+		if a.id != id && m.shortcut(a.id) == acc {
+			return a.label()
+		}
+	}
+	if acc == settingsShortcut {
+		return locales.SettingsTitle()
+	}
+	return ""
+}
+
+// setShortcut saves acc, "" for none, as the shortcut of id: the hotkey,
+// once registered, or an action of the window.
+func (m *Model) setShortcut(id, acc string) {
 	f := &m.settings
+	f.err = ""
+	if id != hotkeyID {
+		if err := m.store.SetShortcut(id, acc); err != nil {
+			f.err = locales.SettingsErrSave(err.Error())
+		}
+		return
+	}
 	st := m.store.Settings()
 	if err := m.registerHotkey(acc); err != nil {
 		f.err = locales.HotkeyErrInUse(hotkeyLabel(acc), err.Error())
 		m.registerHotkey(st.Hotkey)
 		return
 	}
-	f.err = ""
 	st.Hotkey = acc
 	if err := m.store.SetSettings(st); err != nil {
 		f.err = locales.SettingsErrSave(err.Error())

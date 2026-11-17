@@ -93,6 +93,9 @@ type data struct {
 	// siteHostKey.
 	SiteHostKeys map[string]string `json:"siteHostKeys,omitempty"`
 	Settings     Settings          `json:"settings"`
+	// Shortcuts are the shortcuts of the window the user changed, by
+	// action: an accelerator as Settings.Hotkey, or "" for none.
+	Shortcuts map[string]string `json:"shortcuts,omitempty"`
 }
 
 func siteHostKey(siteID, serverID string) string { return siteID + "/" + serverID }

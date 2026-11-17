@@ -195,6 +195,11 @@
   "filesTransferWaiting": "Waiting",
   "filesUpload": "Upload Files",
   "groupCollapseAll": "Collapse All",
+  "groupConnectAll": "Connect All Servers",
+  "@groupConnectAll": {
+    "description": "A menu item of a group: opens a terminal on each server in the group and its subgroups."
+  },
+  "groupConnecting": "{count, plural, one {Connecting to # server} other {Connecting to # servers}}",
   "groupCreate": "Create",
   "@groupCreate": {
     "description": "Button creating a new group."
@@ -213,6 +218,10 @@
   "groupRenameMenu": "Rename…",
   "groupRenameTitle": "Rename Group",
   "hotkeyClear": "Clear",
+  "hotkeyClearLabel": "Clear the {name}",
+  "@hotkeyClearLabel": {
+    "description": "The accessibility label of the Clear button of a shortcut field: {name} is the field's label."
+  },
   "hotkeyErrInUse": "Can’t use {hotkey}. It may be taken by the system or another app ({error}).",
   "hotkeyErrModifier": "The shortcut must include {modifiers}",
   "@hotkeyErrModifier": {
@@ -273,11 +282,12 @@
   "serverPassphrasePlaceholder": "Leave blank if not encrypted",
   "serverSiteHint": "The server and its credentials are saved to the site and sync to the web and your other devices. To connect, this machine gets the credentials from the site and opens SSH directly.",
   "settingsErrSave": "Couldn’t save: {error}",
+  "settingsGeneral": "General",
   "settingsHotkey": "Show/Hide Hotkey",
   "@settingsHotkey": {
     "description": "A global shortcut that shows or hides the window."
   },
-  "settingsHotkeyHint": "Press this shortcut in any app to show or hide the ternssh window.",
+  "settingsHotkeyHint": "Press it in any app to show or hide the ternssh window, with the keyboard in the terminal.",
   "settingsLanguage": "Language",
   "@settingsLanguage": {
     "description": "Settings: the field choosing the app's language."
@@ -296,7 +306,20 @@
   },
   "settingsOnClose": "When Closing the Window",
   "settingsQuitApp": "Quit App",
+  "settingsShortcuts": "Shortcuts",
   "settingsTitle": "Settings",
+  "shortcutErrTaken": "{shortcut} is already the shortcut of {name}",
+  "shortcutFieldLabel": "{name} shortcut",
+  "@shortcutFieldLabel": {
+    "description": "The accessibility label of the field of an action's shortcut, as \"New Terminal shortcut\"."
+  },
+  "shortcutNewTerminal": "New Terminal",
+  "shortcutNextSite": "Next Site",
+  "shortcutNextTab": "Next Terminal",
+  "shortcutPrevSite": "Previous Site",
+  "shortcutPrevTab": "Previous Terminal",
+  "shortcutReset": "Restore Defaults",
+  "shortcutSettingsHint": "{shortcut} opens the settings. Click a shortcut, then press the keys; Backspace clears it.",
   "siteAccessCanceled": "Sign-in to Cloudflare Access was canceled",
   "siteAccessHint": "Without a service token, choose None: the site’s Cloudflare Access sign-in opens in a window when it asks. A service token needs no sign-in: create one in Zero Trust and allow it in the application’s policy (Service Auth).",
   "siteAccessRequired": "The site is behind Cloudflare Access; sign in to reach it",

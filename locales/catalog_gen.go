@@ -1278,6 +1278,32 @@ func (msgs Messages) GroupCollapseAll() string {
 	return Catalog.Format(msgs.locale, "groupCollapseAll", nil)
 }
 
+// GroupConnectAll says "Connect All Servers"
+// in the language the app shows.
+//
+// A menu item of a group: opens a terminal on each server in the group and
+// its subgroups.
+func GroupConnectAll() string { return In(i18n.Locale()).GroupConnectAll() }
+
+// GroupConnectAll says "Connect All Servers"
+// in the language of msgs.
+//
+// A menu item of a group: opens a terminal on each server in the group and
+// its subgroups.
+func (msgs Messages) GroupConnectAll() string {
+	return Catalog.Format(msgs.locale, "groupConnectAll", nil)
+}
+
+// GroupConnecting says "{count, plural, one {Connecting to # server} other {Connecting to # servers}}"
+// in the language the app shows.
+func GroupConnecting(count int) string { return In(i18n.Locale()).GroupConnecting(count) }
+
+// GroupConnecting says "{count, plural, one {Connecting to # server} other {Connecting to # servers}}"
+// in the language of msgs.
+func (msgs Messages) GroupConnecting(count int) string {
+	return Catalog.Format(msgs.locale, "groupConnecting", map[string]any{"count": count})
+}
+
 // GroupCreate says "Create"
 // in the language the app shows.
 //
@@ -1432,6 +1458,22 @@ func HotkeyClear() string { return In(i18n.Locale()).HotkeyClear() }
 // in the language of msgs.
 func (msgs Messages) HotkeyClear() string {
 	return Catalog.Format(msgs.locale, "hotkeyClear", nil)
+}
+
+// HotkeyClearLabel says "Clear the {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Clear button of a shortcut field: {name}
+// is the field's label.
+func HotkeyClearLabel(name string) string { return In(i18n.Locale()).HotkeyClearLabel(name) }
+
+// HotkeyClearLabel says "Clear the {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Clear button of a shortcut field: {name}
+// is the field's label.
+func (msgs Messages) HotkeyClearLabel(name string) string {
+	return Catalog.Format(msgs.locale, "hotkeyClearLabel", map[string]any{"name": name})
 }
 
 // HotkeyErrInUse says "Can’t use {hotkey}. It may be taken by the system or another app ({error})."
@@ -1918,6 +1960,16 @@ func (msgs Messages) SettingsErrSave(error string) string {
 	return Catalog.Format(msgs.locale, "settingsErrSave", map[string]any{"error": error})
 }
 
+// SettingsGeneral says "General"
+// in the language the app shows.
+func SettingsGeneral() string { return In(i18n.Locale()).SettingsGeneral() }
+
+// SettingsGeneral says "General"
+// in the language of msgs.
+func (msgs Messages) SettingsGeneral() string {
+	return Catalog.Format(msgs.locale, "settingsGeneral", nil)
+}
+
 // SettingsHotkey says "Show/Hide Hotkey"
 // in the language the app shows.
 //
@@ -1932,11 +1984,11 @@ func (msgs Messages) SettingsHotkey() string {
 	return Catalog.Format(msgs.locale, "settingsHotkey", nil)
 }
 
-// SettingsHotkeyHint says "Press this shortcut in any app to show or hide the ternssh window."
+// SettingsHotkeyHint says "Press it in any app to show or hide the ternssh window, with the keyboard in the terminal."
 // in the language the app shows.
 func SettingsHotkeyHint() string { return In(i18n.Locale()).SettingsHotkeyHint() }
 
-// SettingsHotkeyHint says "Press this shortcut in any app to show or hide the ternssh window."
+// SettingsHotkeyHint says "Press it in any app to show or hide the ternssh window, with the keyboard in the terminal."
 // in the language of msgs.
 func (msgs Messages) SettingsHotkeyHint() string {
 	return Catalog.Format(msgs.locale, "settingsHotkeyHint", nil)
@@ -2018,6 +2070,16 @@ func (msgs Messages) SettingsQuitApp() string {
 	return Catalog.Format(msgs.locale, "settingsQuitApp", nil)
 }
 
+// SettingsShortcuts says "Shortcuts"
+// in the language the app shows.
+func SettingsShortcuts() string { return In(i18n.Locale()).SettingsShortcuts() }
+
+// SettingsShortcuts says "Shortcuts"
+// in the language of msgs.
+func (msgs Messages) SettingsShortcuts() string {
+	return Catalog.Format(msgs.locale, "settingsShortcuts", nil)
+}
+
 // SettingsTitle says "Settings"
 // in the language the app shows.
 func SettingsTitle() string { return In(i18n.Locale()).SettingsTitle() }
@@ -2026,6 +2088,106 @@ func SettingsTitle() string { return In(i18n.Locale()).SettingsTitle() }
 // in the language of msgs.
 func (msgs Messages) SettingsTitle() string {
 	return Catalog.Format(msgs.locale, "settingsTitle", nil)
+}
+
+// ShortcutErrTaken says "{shortcut} is already the shortcut of {name}"
+// in the language the app shows.
+func ShortcutErrTaken(shortcut string, name string) string {
+	return In(i18n.Locale()).ShortcutErrTaken(shortcut, name)
+}
+
+// ShortcutErrTaken says "{shortcut} is already the shortcut of {name}"
+// in the language of msgs.
+func (msgs Messages) ShortcutErrTaken(shortcut string, name string) string {
+	return Catalog.Format(msgs.locale, "shortcutErrTaken", map[string]any{"shortcut": shortcut, "name": name})
+}
+
+// ShortcutFieldLabel says "{name} shortcut"
+// in the language the app shows.
+//
+// The accessibility label of the field of an action's shortcut, as "New
+// Terminal shortcut".
+func ShortcutFieldLabel(name string) string { return In(i18n.Locale()).ShortcutFieldLabel(name) }
+
+// ShortcutFieldLabel says "{name} shortcut"
+// in the language of msgs.
+//
+// The accessibility label of the field of an action's shortcut, as "New
+// Terminal shortcut".
+func (msgs Messages) ShortcutFieldLabel(name string) string {
+	return Catalog.Format(msgs.locale, "shortcutFieldLabel", map[string]any{"name": name})
+}
+
+// ShortcutNewTerminal says "New Terminal"
+// in the language the app shows.
+func ShortcutNewTerminal() string { return In(i18n.Locale()).ShortcutNewTerminal() }
+
+// ShortcutNewTerminal says "New Terminal"
+// in the language of msgs.
+func (msgs Messages) ShortcutNewTerminal() string {
+	return Catalog.Format(msgs.locale, "shortcutNewTerminal", nil)
+}
+
+// ShortcutNextSite says "Next Site"
+// in the language the app shows.
+func ShortcutNextSite() string { return In(i18n.Locale()).ShortcutNextSite() }
+
+// ShortcutNextSite says "Next Site"
+// in the language of msgs.
+func (msgs Messages) ShortcutNextSite() string {
+	return Catalog.Format(msgs.locale, "shortcutNextSite", nil)
+}
+
+// ShortcutNextTab says "Next Terminal"
+// in the language the app shows.
+func ShortcutNextTab() string { return In(i18n.Locale()).ShortcutNextTab() }
+
+// ShortcutNextTab says "Next Terminal"
+// in the language of msgs.
+func (msgs Messages) ShortcutNextTab() string {
+	return Catalog.Format(msgs.locale, "shortcutNextTab", nil)
+}
+
+// ShortcutPrevSite says "Previous Site"
+// in the language the app shows.
+func ShortcutPrevSite() string { return In(i18n.Locale()).ShortcutPrevSite() }
+
+// ShortcutPrevSite says "Previous Site"
+// in the language of msgs.
+func (msgs Messages) ShortcutPrevSite() string {
+	return Catalog.Format(msgs.locale, "shortcutPrevSite", nil)
+}
+
+// ShortcutPrevTab says "Previous Terminal"
+// in the language the app shows.
+func ShortcutPrevTab() string { return In(i18n.Locale()).ShortcutPrevTab() }
+
+// ShortcutPrevTab says "Previous Terminal"
+// in the language of msgs.
+func (msgs Messages) ShortcutPrevTab() string {
+	return Catalog.Format(msgs.locale, "shortcutPrevTab", nil)
+}
+
+// ShortcutReset says "Restore Defaults"
+// in the language the app shows.
+func ShortcutReset() string { return In(i18n.Locale()).ShortcutReset() }
+
+// ShortcutReset says "Restore Defaults"
+// in the language of msgs.
+func (msgs Messages) ShortcutReset() string {
+	return Catalog.Format(msgs.locale, "shortcutReset", nil)
+}
+
+// ShortcutSettingsHint says "{shortcut} opens the settings. Click a shortcut, then press the keys; Backspace clears it."
+// in the language the app shows.
+func ShortcutSettingsHint(shortcut string) string {
+	return In(i18n.Locale()).ShortcutSettingsHint(shortcut)
+}
+
+// ShortcutSettingsHint says "{shortcut} opens the settings. Click a shortcut, then press the keys; Backspace clears it."
+// in the language of msgs.
+func (msgs Messages) ShortcutSettingsHint(shortcut string) string {
+	return Catalog.Format(msgs.locale, "shortcutSettingsHint", map[string]any{"shortcut": shortcut})
 }
 
 // SiteAccessCanceled says "Sign-in to Cloudflare Access was canceled"

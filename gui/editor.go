@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -284,7 +285,7 @@ func whereLabel(where string) string {
 }
 
 func saveShortcut() string {
-	if newSessionLabel == "⌘T" {
+	if runtime.GOOS == "darwin" {
 		return "⌘S"
 	}
 	return "Ctrl+S"

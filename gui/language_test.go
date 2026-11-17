@@ -23,6 +23,9 @@ func TestLanguage(t *testing.T) {
 	if err := tt.Click("设置"); err != nil {
 		t.Fatal(err)
 	}
+	if err := tt.Click("跟随系统"); err != nil {
+		t.Fatal(err)
+	}
 	if err := tt.Click("English"); err != nil {
 		t.Fatal(err)
 	}
@@ -48,6 +51,9 @@ func TestLanguage(t *testing.T) {
 	tt.Frame()
 	if m.settings.language != 1 {
 		t.Fatalf("language shown %d", m.settings.language)
+	}
+	if err := tt.Click("English"); err != nil {
+		t.Fatal(err)
 	}
 	if err := tt.Click("System"); err != nil {
 		t.Fatal(err)

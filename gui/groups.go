@@ -2,6 +2,7 @@ package gui
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
@@ -101,6 +102,11 @@ func (m *Model) groupBlock(c *ui.Context, s *siteState, id, name, parent string,
 		}
 		m.dropOn(c, s, row, dragged{s, store.KindGroup, id}, parent)
 		row.ContextMenu(func(menu *ui.Menu) {
+			n := s.serverCount(id)
+			if menu.Item(locales.GroupConnectAll()).Trailing(strconv.Itoa(n)).Disabled(n == 0).Chosen() {
+				m.connectGroup(s, id)
+			}
+			menu.Separator()
 			if menu.Item(locales.GroupExpandAll()).Chosen() {
 				s.setAllOpen(true)
 			}
@@ -360,6 +366,66 @@ func (s *siteState) homeCount(id string) int {
 		}
 	}
 	return n
+}
+
+// serversIn lists the servers in a group of the tab and its subgroups,
+// in the order the sidebar shows them: the site's, or this machine's at
+// home.
+func (s *siteState) serversIn(id string) (synced []ternssh.Node, local []store.Server) {
+	if s.home() {
+		var walk func(parent string)
+		walk = func(parent string) {
+			for _, it := range store.Children(s.groups, s.terminals, s.local, parent) {
+				switch it.Kind {
+				case store.KindGroup:
+					walk(it.ID)
+				case store.KindServer:
+					if i := slices.IndexFunc(s.local, func(srv store.Server) bool { return srv.ID == it.ID }); i >= 0 {
+						local = append(local, s.local[i])
+					}
+				}
+			}
+		}
+		walk(id)
+		return nil, local
+	}
+	group, _, ok := findNode(s.tree, "", "group", id)
+	if !ok {
+		return nil, nil
+	}
+	var walk func([]ternssh.Node)
+	walk = func(nodes []ternssh.Node) {
+		for _, n := range nodes {
+			if n.Type == "server" {
+				synced = append(synced, n)
+			}
+			walk(n.Children)
+		}
+	}
+	walk(group.Children)
+	return synced, nil
+}
+
+// serverCount counts the servers in a group of the tab and its
+// subgroups.
+func (s *siteState) serverCount(id string) int {
+	synced, local := s.serversIn(id)
+	return len(synced) + len(local)
+}
+
+// connectGroup opens a terminal on each server in a group of the tab and
+// its subgroups.
+func (m *Model) connectGroup(s *siteState, id string) {
+	synced, local := s.serversIn(id)
+	for _, node := range synced {
+		m.openSynced(s, node)
+	}
+	for _, srv := range local {
+		m.openLocal(s, srv)
+	}
+	if n := len(synced) + len(local); n > 0 {
+		m.notify(locales.GroupConnecting(n))
+	}
 }
 
 // --- The group dialog

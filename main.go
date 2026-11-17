@@ -64,6 +64,7 @@ func main() {
 			win.Show()
 			win.Focus()
 			mygo.App.Focus()
+			win.Update(model.FocusTerminal)
 		}
 		hide := func() {
 			win.Hide()
@@ -89,6 +90,7 @@ func main() {
 					Conn:        conn,
 					Transparent: true,
 					Padding:     terminal.Padding{X: 10, Y: 8},
+					OnKey:       model.TerminalKey,
 				})
 			},
 			NewShell: func(dir string, onExit func(int)) (*terminal.Terminal, error) {
@@ -97,6 +99,7 @@ func main() {
 					ShellIntegration: true,
 					Transparent:      true,
 					Padding:          terminal.Padding{X: 10, Y: 8},
+					OnKey:            model.TerminalKey,
 					OnExit:           onExit,
 				})
 			},

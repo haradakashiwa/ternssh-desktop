@@ -9,13 +9,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/egoist/mygo/plugins/terminal"
-	"github.com/egoist/mygo/ui"
 
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
@@ -476,16 +474,6 @@ func (m *Model) openShell(s *siteState, t store.Terminal) {
 	s.sessions = append(s.sessions, sess)
 	s.current = len(s.sessions) - 1
 }
-
-// newSessionKey is the shortcut of newSession: Command+T on macOS, and
-// Control+Shift+T elsewhere, as Windows Terminal's, since Control+T
-// belongs to the shell (transposing, fzf's file finder).
-var newSessionMods, newSessionLabel = func() (ui.Modifiers, string) {
-	if runtime.GOOS == "darwin" {
-		return ui.Super, "⌘T"
-	}
-	return ui.Ctrl | ui.Shift, "Ctrl+Shift+T"
-}()
 
 // newSession opens another terminal in the tab shown: on what its current
 // terminal is on, else on what the sidebar chose, else, at home, on the

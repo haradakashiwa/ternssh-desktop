@@ -23,24 +23,31 @@ func TestSettings(t *testing.T) {
 	if err := tt.Click("设置"); err != nil {
 		t.Fatal(err)
 	}
-	if !m.settingsOpen || !tt.HasText("未设置") {
+	if !m.settingsOpen || !tt.HasText("关闭窗口时") {
 		t.Fatal("the settings are not shown")
 	}
 	snapshot(t, tt, "settings")
+	if err := tt.Click("快捷键"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText("未设置") || !tt.HasText(hotkeyLabel(shortcutActions[0].byDefault())) {
+		t.Fatalf("the shortcuts are not shown: %q", tt.Texts())
+	}
+	snapshot(t, tt, "settings-shortcuts")
 
 	// A key alone is no hotkey; one with a modifier is.
 	if err := tt.Click("快速唤出快捷键"); err != nil {
 		t.Fatal(err)
 	}
-	if !m.settings.recording || !tt.HasText("请按下快捷键…") {
+	if m.settings.recording != hotkeyID || !tt.HasText("请按下快捷键…") {
 		t.Fatal("not recording")
 	}
 	tt.Key(0, ui.KeyK)
-	if !m.settings.recording || m.settings.err == "" {
+	if m.settings.recording == "" || m.settings.err == "" {
 		t.Fatalf("a key alone taken, error %q", m.settings.err)
 	}
 	tt.Key(ui.Alt, ui.KeySpace)
-	if got := st.Settings().Hotkey; got != "Alt+Space" || m.settings.recording || m.settings.err != "" {
+	if got := st.Settings().Hotkey; got != "Alt+Space" || m.settings.recording != "" || m.settings.err != "" {
 		t.Fatalf("hotkey %q, recording %v, error %q", got, m.settings.recording, m.settings.err)
 	}
 	tt.Frame()
@@ -57,17 +64,22 @@ func TestSettings(t *testing.T) {
 	// Escape cancels, and puts the hotkey back.
 	tt.Click("快速唤出快捷键")
 	tt.Key(0, ui.KeyEscape)
-	if m.settings.recording || st.Settings().Hotkey != "Alt+Space" || registered[len(registered)-1] != "Alt+Space" {
+	if m.settings.recording != "" || st.Settings().Hotkey != "Alt+Space" || registered[len(registered)-1] != "Alt+Space" {
 		t.Fatalf("recording %v, registered %q", m.settings.recording, registered)
 	}
-	// While recording, the window's shortcuts are the hotkey's.
+	// While recording, the window's shortcuts are the hotkey's, but for
+	// one that is another's.
 	tt.Click("快速唤出快捷键")
 	tt.Key(newSessionMods, ui.KeyT)
-	if got := st.Settings().Hotkey; got != hotkeyString(newSessionMods, "T") {
+	if st.Settings().Hotkey != "Alt+Space" || m.settings.err != "Ctrl+Shift+T 已用于「新建终端」" && m.settings.err != "⌘T 已用于「新建终端」" {
+		t.Fatalf("hotkey %q, error %q", st.Settings().Hotkey, m.settings.err)
+	}
+	tt.Key(ui.Ctrl|ui.Alt, ui.KeyJ)
+	if got := st.Settings().Hotkey; got != "Ctrl+Alt+J" {
 		t.Fatalf("hotkey %q", got)
 	}
 
-	if err := tt.Click("清除"); err != nil {
+	if err := tt.Click("清除快速唤出快捷键"); err != nil {
 		t.Fatal(err)
 	}
 	if st.Settings().Hotkey != "" || registered[len(registered)-1] != "" {
@@ -75,6 +87,12 @@ func TestSettings(t *testing.T) {
 	}
 
 	// Closing the window quits, as chosen.
+	if err := tt.Click("通用"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.Click(minimizeLabel()); err != nil {
+		t.Fatal(err)
+	}
 	if err := tt.Click("退出应用"); err != nil {
 		t.Fatal(err)
 	}

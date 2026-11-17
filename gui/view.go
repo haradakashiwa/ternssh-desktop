@@ -24,14 +24,9 @@ func (m *Model) View(c *ui.Context) {
 		c.Root().Background(t.Background)
 	}
 
-	// The keys of a hotkey being recorded are its own.
-	if !m.settings.recording {
-		if c.Shortcut(newSessionMods, ui.KeyT) && !c.ShortcutRepeated() {
-			m.newSession()
-		}
-		if c.Shortcut(ui.Cmd, ui.KeyComma) && !c.ShortcutRepeated() {
-			m.OpenSettings()
-		}
+	// The keys of a shortcut being recorded are its own.
+	if m.settings.recording == "" {
+		m.handleShortcuts(c)
 	}
 
 	ui.Column(c).Fill().Children(func() {
@@ -437,10 +432,12 @@ func (m *Model) workspace(c *ui.Context, s *siteState) {
 				ui.Icon(c, terminalIcon).Size(40, 40).TextColor(t.TextMuted.Alpha(0.6))
 				ui.Text(c, locales.ViewNoTerminals()).FontSize(16).Bold()
 				ui.Text(c, locales.ViewNoTerminalsHint()).TextColor(t.TextMuted)
-				if s.home() {
-					ui.Text(c, locales.ViewLocalTerminalShortcut(newSessionLabel)).FontSize(12).TextColor(t.TextMuted)
-				} else {
-					ui.Text(c, locales.ViewTerminalShortcut(newSessionLabel)).FontSize(12).TextColor(t.TextMuted)
+				switch key := m.shortcutLabel("newTerminal"); {
+				case key == "":
+				case s.home():
+					ui.Text(c, locales.ViewLocalTerminalShortcut(key)).FontSize(12).TextColor(t.TextMuted)
+				default:
+					ui.Text(c, locales.ViewTerminalShortcut(key)).FontSize(12).TextColor(t.TextMuted)
 				}
 				if s.home() && len(m.sites) == 1 {
 					ui.Text(c, locales.ViewSyncHint()).FontSize(12).TextColor(t.TextMuted)
@@ -524,7 +521,11 @@ func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 			if closed >= 0 {
 				m.closeSession(s, closed)
 			}
-			if iconButton(c, plusIcon, locales.ViewNewSession()).Tooltip(locales.ViewNewSessionTooltip(newSessionLabel)).Clicked() {
+			tip := locales.ViewNewSession()
+			if key := m.shortcutLabel("newTerminal"); key != "" {
+				tip = locales.ViewNewSessionTooltip(key)
+			}
+			if iconButton(c, plusIcon, locales.ViewNewSession()).Tooltip(tip).Clicked() {
 				m.newSession()
 			}
 		})

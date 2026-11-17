@@ -1,66 +1,35 @@
 # ternssh desktop
 
-[English](README.en.md) | 简体中文
+English | [简体中文](README.zh.md)
 
-[ternssh](https://github.com/haradakashiwa/ternssh) 的桌面客户端：一个原生的 SSH 终端与服务器管理工具，支持 macOS 和 Windows。界面用 [MyGo](https://github.com/egoist/mygo) 原生 UI 编写，没有 WebView。
+The desktop client of [ternssh](https://github.com/haradakashiwa/ternssh): a native SSH terminal and server manager for macOS and Windows. Its interface is written in [MyGo](https://github.com/egoist/mygo)'s native UI, with no WebView.
 
-- **本机即可使用**：不添加任何站点，也能在「本机」标签里管理服务器和本地终端，凭据存在系统钥匙串。
-- **多设备同步**：添加 ternssh 站点后，站点上的服务器、分组和快捷指令出现在独立的标签里，在客户端的修改会写回站点。
-- **所有连接都从本机发起**：站点只用来同步 SSH 信息，不经它转发流量。
+- **Works on its own**: without adding any site, the "Local" tab manages servers and local terminals, with credentials kept in the system keychain.
+- **Synced across devices**: once a ternssh site is added, its servers, groups and snippets appear in a tab of their own, and changes made in the client are written back to the site.
+- **Every connection is made from this machine**: a site only syncs the SSH details, and no traffic goes through it.
 
-![本机终端与文件](docs/screenshot-local.png)
+![A local terminal and its files](docs/screenshot-local.png)
 
-![服务器终端、文件与状态监控](docs/screenshot-server.png)
+![A server's terminal, files and status](docs/screenshot-server.png)
 
-## 下载
+## Download
 
-在 [Releases](https://github.com/haradakashiwa/ternssh-desktop/releases) 下载：
+Download from [Releases](https://github.com/haradakashiwa/ternssh-desktop/releases):
 
-| 系统 | 文件 |
+| System | File |
 |---|---|
-| macOS（Apple 芯片与 Intel） | `ternssh-<版本>-macos-universal.dmg` |
-| Windows x64 | `…-windows-amd64-setup.exe`（安装包）或 `…-windows-amd64-portable.zip`（免安装） |
-| Windows ARM64 | `…-windows-arm64-setup.exe` 或 `…-windows-arm64-portable.zip` |
+| macOS (Apple silicon and Intel) | `ternssh-<version>-macos-universal.dmg` |
+| Windows x64 | `…-windows-amd64-setup.exe` (installer) or `…-windows-amd64-portable.zip` (portable) |
+| Windows ARM64 | `…-windows-arm64-setup.exe` or `…-windows-arm64-portable.zip` |
 
-安装包没有开发者证书签名：macOS 首次打开时请右键应用选「打开」；Windows 若出现 SmartScreen 提示，点「更多信息」→「仍要运行」。
+The builds are not signed with a developer certificate: on macOS, right-click the app and choose "Open" the first time; on Windows, if SmartScreen warns, click "More info" → "Run anyway".
 
-## 功能
+## Features
 
-- **服务器管理**：本机或 ternssh 站点的服务器与分组，拖拽整理，站点上的修改双向同步。
-- **终端**：多标签 SSH 终端和本地终端，基于 libghostty-vt。
-- **文件**：SFTP 和本机文件浏览、上传下载，双击即可在带语法高亮的编辑器中修改。
-- **快捷指令**：一键在终端运行常用命令，站点的指令与网页端共享。
-- **服务器状态**：CPU、内存、磁盘、网络流量和进程的实时监控（Linux）。
-- **托盘与全局快捷键**：关闭窗口后驻留托盘，随时一键唤出。
-- **多语言**：简体中文和英文，默认跟随系统，可在设置中切换。
-
-## 开发
-
-需要 Go 1.27.3+（`GOTOOLCHAIN=auto` 会自动下载）。
-
-```sh
-make dev                                # 开发运行（热重载）
-make mac                                # 打包 macOS .app 和 .dmg
-make windows                            # 交叉编译 Windows x64/ARM64 及安装包（需要 NSIS）
-make test                               # vet（含 Windows）和测试
-SNAPSHOT_DIR=/tmp/snap go test ./gui    # 输出界面快照
-```
-
-## 发布
-
-推送 `v` 开头的 tag，GitHub Actions（`.github/workflows/release.yml`）会测试、打包并创建 Release。版本号取自 tag，无需修改 `mygo.json`；带 `-` 的版本（如 `v0.2.0-beta.1`）标为预发布。
-
-```sh
-git tag v0.2.0 && git push origin v0.2.0
-```
-
-## 目录
-
-| 路径 | 内容 |
-|---|---|
-| `main.go` | 窗口、托盘、全局快捷键、系统钥匙串、文件选择等平台相关部分 |
-| `gui/` | 原生界面与状态：站点标签、侧栏、终端、面板、编辑器、对话框 |
-| `internal/ternssh` | ternssh 站点的 HTTP API 客户端 |
-| `internal/sshconn` | SSH 连接、SFTP 与本机文件 |
-| `locales/` | 界面文字：`en.json`（源语言）和 `zh-Hans.json`，`catalog_gen.go` 由 `mygo dev`/`mygo build`/`mygo generate` 生成 |
-| `internal/store` | 站点、本地服务器、快捷指令与设置（`config.json`），密钥存系统钥匙串 |
+- **Servers**: servers and groups on this machine or on a ternssh site, arranged by drag and drop, with changes synced both ways.
+- **Terminals**: tabs of SSH and local terminals, built on libghostty-vt.
+- **Files**: browse files over SFTP and on this machine, upload and download, and double-click to edit in an editor with syntax highlighting.
+- **Snippets**: run common commands in the terminal in one click; a site's snippets are shared with its web app.
+- **Server status**: live CPU, memory, disk, network and process monitoring (Linux).
+- **Tray and global hotkey**: closing the window keeps the app in the tray, and a hotkey brings it back.
+- **Languages**: Simplified Chinese and English, following the system by default, switchable in the settings.

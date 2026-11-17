@@ -1,5 +1,9 @@
 {
   "@@locale": "en",
+  "accessLoginTitle": "Sign in to {host}",
+  "@accessLoginTitle": {
+    "description": "Title of the window where the user signs in to a site's Cloudflare Access."
+  },
   "add": "Add",
   "appDownloadTo": "Download To",
   "@appDownloadTo": {
@@ -293,7 +297,9 @@
   "settingsOnClose": "When Closing the Window",
   "settingsQuitApp": "Quit App",
   "settingsTitle": "Settings",
-  "siteAccessHint": "If the site is behind Cloudflare Access, create a service token in Zero Trust and allow it in the application’s policy (Service Auth).",
+  "siteAccessCanceled": "Sign-in to Cloudflare Access was canceled",
+  "siteAccessHint": "Without a service token, choose None: the site’s Cloudflare Access sign-in opens in a window when it asks. A service token needs no sign-in: create one in Zero Trust and allow it in the application’s policy (Service Auth).",
+  "siteAccessRequired": "The site is behind Cloudflare Access; sign in to reach it",
   "siteAddressInvalid": "Invalid site address: {address}",
   "siteAddressRequired": "Enter the site address",
   "siteAddressScheme": "The site address must use http or https",
@@ -317,7 +323,7 @@
   "siteErrSecret": "Enter the password or Client Secret",
   "siteFieldAddress": "Address",
   "siteFieldAuth": "Authentication",
-  "siteGotPage": "The site returned a web page instead of an API response: it may be behind Cloudflare Access; configure an Access service token",
+  "siteGotPage": "The site returned a web page instead of an API response",
   "siteNamePlaceholder": "Optional, defaults to the site’s name",
   "siteNoCommand": "This quick command isn’t on the site; it may have been deleted",
   "siteRequestFailed": "Request failed (HTTP {status})",

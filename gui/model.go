@@ -77,6 +77,12 @@ type Backend struct {
 	// SetLanguage makes the app show the language of tag, as "en", or
 	// the system's for "".
 	SetLanguage func(tag string)
+	// AccessLogin opens a window where the user signs in to the
+	// Cloudflare Access of the site at siteURL, and returns the token of
+	// the sign-in once they did, or an error when they closed the window.
+	// It is called from another goroutine than the main thread, and nil
+	// leaves requests that need a sign-in to fail.
+	AccessLogin func(ctx context.Context, siteURL string) (token string, err error)
 }
 
 // Model is the state of the window.
@@ -190,20 +196,34 @@ func New(st *store.Store, b Backend) *Model {
 func (m *Model) newSiteState(site store.Site) *siteState {
 	s := &siteState{site: site, groupsOpen: map[string]*bool{}}
 	if site.ID != "" {
-		s.client, _ = ternssh.New(site.URL, m.authOf(site))
+		s.client, _ = m.newClient(site, m.store.SiteSecret(site.ID))
 	}
 	return s
 }
 
-func (m *Model) authOf(site store.Site) ternssh.Auth {
-	secret := m.store.SiteSecret(site.ID)
+// newClient returns a client of site, which authenticates with secret
+// and signs in to the site's Cloudflare Access when it asks.
+func (m *Model) newClient(site store.Site, secret string) (*ternssh.Client, error) {
+	auth := ternssh.Auth{AccessToken: m.store.SiteAccessToken(site.ID)}
 	switch site.Auth {
 	case store.AuthBasic:
-		return ternssh.Auth{Username: site.Username, Password: secret}
+		auth.Username, auth.Password = site.Username, secret
 	case store.AuthAccess:
-		return ternssh.Auth{AccessClientID: site.ClientID, AccessClientSecret: secret}
+		auth.AccessClientID, auth.AccessClientSecret = site.ClientID, secret
 	}
-	return ternssh.Auth{}
+	client, err := ternssh.New(site.URL, auth)
+	if err != nil || m.backend.AccessLogin == nil {
+		return client, err
+	}
+	url := client.BaseURL()
+	client.SetAccessLogin(func(ctx context.Context) (string, error) {
+		token, err := m.backend.AccessLogin(ctx, url)
+		if err == nil {
+			m.store.SetSiteAccessToken(site.ID, token)
+		}
+		return token, err
+	})
+	return client, nil
 }
 
 // Start loads the servers of the tab shown.

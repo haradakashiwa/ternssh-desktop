@@ -116,7 +116,7 @@ func TestSiteCommands(t *testing.T) {
 	sent := typed(t)
 	apply := updatesHere(t, m)
 	s := m.sites[1]
-	s.client, _ = ternssh.New(site.URL, m.authOf(s.site))
+	s.client = clientAt(m, s, site.URL)
 	m.openSynced(s, s.tree[1])
 	sess := s.sessions[0]
 	sess.status = sshconn.StatusReady

@@ -49,6 +49,15 @@ func (f *fakeConn) Close() error                { f.status = sshconn.StatusClose
 func (f *fakeConn) Resize(int, int) error       { return nil }
 func (f *fakeConn) Status() sshconn.Status      { return f.status }
 
+// clientAt returns a client of the tab's site that talks to url, a test
+// server, instead.
+func clientAt(m *Model, s *siteState, url string) *ternssh.Client {
+	site := s.site
+	site.URL = url
+	c, _ := m.newClient(site, m.store.SiteSecret(site.ID))
+	return c
+}
+
 func testModel(t *testing.T) (*Model, *store.Store) {
 	t.Helper()
 	pending := make(chan func(), 64)
@@ -524,7 +533,7 @@ func TestSyncedServer(t *testing.T) {
 	withSites(t, m, st)
 	s := m.sites[1]
 	s.site.URL = site.URL
-	s.client, _ = ternssh.New(site.URL, m.authOf(s.site))
+	s.client = clientAt(m, s, site.URL)
 	var opts sshconn.LocalOptions
 	m.backend.Dial = func(o sshconn.LocalOptions, _ sshconn.Events) Conn { opts = o; return &fakeConn{} }
 
@@ -870,7 +879,7 @@ func TestSiteGroups(t *testing.T) {
 	m, st := testModel(t)
 	withSites(t, m, st)
 	s := m.sites[1]
-	s.client, _ = ternssh.New(site.URL, m.authOf(s.site))
+	s.client = clientAt(m, s, site.URL)
 	updates := make(chan func(), 8)
 	m.backend.Update = func(fn func()) { updates <- fn }
 	apply := func() {
@@ -938,7 +947,7 @@ func TestEditSyncedServer(t *testing.T) {
 	m, st := testModel(t)
 	withSites(t, m, st)
 	s := m.sites[1]
-	s.client, _ = ternssh.New(site.URL, m.authOf(s.site))
+	s.client = clientAt(m, s, site.URL)
 	// Updates run here, as on the main thread.
 	updates := make(chan func(), 8)
 	m.backend.Update = func(fn func()) { updates <- fn }

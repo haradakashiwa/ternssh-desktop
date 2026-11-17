@@ -147,6 +147,7 @@ func main() {
 				return paths[0], err
 			},
 			SetLanguage: mygo.App.SetLocale,
+			AccessLogin: accessLogin,
 			SetHotkey: func(acc string) error {
 				hotkey.Lock()
 				defer hotkey.Unlock()

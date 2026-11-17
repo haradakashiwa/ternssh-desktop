@@ -243,8 +243,28 @@ func (s *Store) DeleteSite(id string) error {
 	s.mu.Unlock()
 	if s.secrets != nil {
 		s.secrets.Delete("site." + id)
+		s.secrets.Delete("site." + id + ".access")
 	}
 	return err
+}
+
+// SiteAccessToken returns the token of the user's last sign-in to the
+// Cloudflare Access of a site, which SetSiteAccessToken stored.
+func (s *Store) SiteAccessToken(id string) string {
+	if s.secrets == nil {
+		return ""
+	}
+	b, _ := s.secrets.Get("site." + id + ".access")
+	return string(b)
+}
+
+// SetSiteAccessToken stores the token of a sign-in to the Cloudflare
+// Access of a site.
+func (s *Store) SetSiteAccessToken(id, token string) error {
+	if s.secrets == nil {
+		return nil
+	}
+	return s.secrets.Set("site."+id+".access", []byte(token))
 }
 
 // Servers returns the local servers.

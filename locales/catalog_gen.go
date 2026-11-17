@@ -34,6 +34,22 @@ type Messages struct{ locale string }
 // source language.
 func In(locale string) Messages { return Messages{locale} }
 
+// AccessLoginTitle says "Sign in to {host}"
+// in the language the app shows.
+//
+// Title of the window where the user signs in to a site's Cloudflare
+// Access.
+func AccessLoginTitle(host string) string { return In(i18n.Locale()).AccessLoginTitle(host) }
+
+// AccessLoginTitle says "Sign in to {host}"
+// in the language of msgs.
+//
+// Title of the window where the user signs in to a site's Cloudflare
+// Access.
+func (msgs Messages) AccessLoginTitle(host string) string {
+	return Catalog.Format(msgs.locale, "accessLoginTitle", map[string]any{"host": host})
+}
+
 // Add says "Add"
 // in the language the app shows.
 func Add() string { return In(i18n.Locale()).Add() }
@@ -2012,14 +2028,34 @@ func (msgs Messages) SettingsTitle() string {
 	return Catalog.Format(msgs.locale, "settingsTitle", nil)
 }
 
-// SiteAccessHint says "If the site is behind Cloudflare Access, create a service token in Zero Trust and allow it in the application’s pol…"
+// SiteAccessCanceled says "Sign-in to Cloudflare Access was canceled"
+// in the language the app shows.
+func SiteAccessCanceled() string { return In(i18n.Locale()).SiteAccessCanceled() }
+
+// SiteAccessCanceled says "Sign-in to Cloudflare Access was canceled"
+// in the language of msgs.
+func (msgs Messages) SiteAccessCanceled() string {
+	return Catalog.Format(msgs.locale, "siteAccessCanceled", nil)
+}
+
+// SiteAccessHint says "Without a service token, choose None: the site’s Cloudflare Access sign-in opens in a window when it asks. A servic…"
 // in the language the app shows.
 func SiteAccessHint() string { return In(i18n.Locale()).SiteAccessHint() }
 
-// SiteAccessHint says "If the site is behind Cloudflare Access, create a service token in Zero Trust and allow it in the application’s pol…"
+// SiteAccessHint says "Without a service token, choose None: the site’s Cloudflare Access sign-in opens in a window when it asks. A servic…"
 // in the language of msgs.
 func (msgs Messages) SiteAccessHint() string {
 	return Catalog.Format(msgs.locale, "siteAccessHint", nil)
+}
+
+// SiteAccessRequired says "The site is behind Cloudflare Access; sign in to reach it"
+// in the language the app shows.
+func SiteAccessRequired() string { return In(i18n.Locale()).SiteAccessRequired() }
+
+// SiteAccessRequired says "The site is behind Cloudflare Access; sign in to reach it"
+// in the language of msgs.
+func (msgs Messages) SiteAccessRequired() string {
+	return Catalog.Format(msgs.locale, "siteAccessRequired", nil)
 }
 
 // SiteAddressInvalid says "Invalid site address: {address}"
@@ -2202,11 +2238,11 @@ func (msgs Messages) SiteFieldAuth() string {
 	return Catalog.Format(msgs.locale, "siteFieldAuth", nil)
 }
 
-// SiteGotPage says "The site returned a web page instead of an API response: it may be behind Cloudflare Access; configure an Access serv…"
+// SiteGotPage says "The site returned a web page instead of an API response"
 // in the language the app shows.
 func SiteGotPage() string { return In(i18n.Locale()).SiteGotPage() }
 
-// SiteGotPage says "The site returned a web page instead of an API response: it may be behind Cloudflare Access; configure an Access serv…"
+// SiteGotPage says "The site returned a web page instead of an API response"
 // in the language of msgs.
 func (msgs Messages) SiteGotPage() string {
 	return Catalog.Format(msgs.locale, "siteGotPage", nil)

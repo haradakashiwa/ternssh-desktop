@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"ternssh-desktop/locales"
@@ -28,6 +29,9 @@ type Auth struct {
 	// AccessClientID and AccessClientSecret are a Cloudflare Access
 	// service token, for a site behind Access.
 	AccessClientID, AccessClientSecret string
+	// AccessToken is the token of a user's sign-in to Cloudflare Access,
+	// the CF_Authorization cookie Access gives the site's pages.
+	AccessToken string
 }
 
 // Header returns the headers that authenticate a request.
@@ -40,14 +44,26 @@ func (a Auth) Header() http.Header {
 		h.Set("CF-Access-Client-Id", a.AccessClientID)
 		h.Set("CF-Access-Client-Secret", a.AccessClientSecret)
 	}
+	if a.AccessToken != "" {
+		h.Set("Cookie", (&http.Cookie{Name: "CF_Authorization", Value: a.AccessToken}).String())
+	}
 	return h
 }
 
 // Client talks to one site.
 type Client struct {
 	base *url.URL
-	auth Auth
 	http *http.Client
+
+	mu   sync.Mutex
+	auth Auth
+	// login signs in to Cloudflare Access (SetAccessLogin); signingIn
+	// lets one request at a time do it, and logins counts the sign-ins
+	// with loginErr the last one's error.
+	login     func(ctx context.Context) (string, error)
+	signingIn sync.Mutex
+	logins    int
+	loginErr  error
 }
 
 // NormalizeURL turns what a user types into a site's base URL: https is
@@ -76,7 +92,36 @@ func New(baseURL string, auth Auth) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{base: u, auth: auth, http: &http.Client{Timeout: 20 * time.Second}}, nil
+	return &Client{base: u, auth: auth, http: &http.Client{
+		Timeout: 20 * time.Second,
+		// Access sends a request without its token to its sign-in page,
+		// which the client does not follow but signs in for.
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if isAccessLogin(req.URL) {
+				return http.ErrUseLastResponse
+			}
+			if len(via) >= 10 {
+				return errors.New("stopped after 10 redirects")
+			}
+			return nil
+		},
+	}}, nil
+}
+
+// SetAccessLogin makes the client sign in to Cloudflare Access with
+// login when the site is behind it and Access asks for a sign-in: login
+// returns the token, and the request is made again with it. Requests
+// that need a sign-in meanwhile wait for it, rather than sign in again.
+func (c *Client) SetAccessLogin(login func(ctx context.Context) (token string, err error)) {
+	c.mu.Lock()
+	c.login = login
+	c.mu.Unlock()
+}
+
+// isAccessLogin reports whether u is Cloudflare Access's sign-in.
+func isAccessLogin(u *url.URL) bool {
+	return strings.HasSuffix(strings.ToLower(u.Hostname()), ".cloudflareaccess.com") ||
+		strings.HasPrefix(u.Path, "/cdn-cgi/access/login")
 }
 
 // BaseURL returns the site's base URL.
@@ -107,6 +152,51 @@ func (e *Error) Error() string {
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body, out any) error {
+	c.mu.Lock()
+	auth, login := c.auth, c.login
+	c.mu.Unlock()
+	err := c.try(ctx, auth, method, path, body, out)
+	if err != ErrAccessLogin || login == nil {
+		return err
+	}
+	// The user may take longer to sign in than the request is given.
+	ctx = context.WithoutCancel(ctx)
+	if err := c.signIn(ctx, login, auth.AccessToken); err != nil {
+		return err
+	}
+	c.mu.Lock()
+	auth = c.auth
+	c.mu.Unlock()
+	return c.try(ctx, auth, method, path, body, out)
+}
+
+// signIn signs in to Cloudflare Access, unless another request did since
+// stale, the token Access refused, was sent.
+func (c *Client) signIn(ctx context.Context, login func(context.Context) (string, error), stale string) error {
+	c.mu.Lock()
+	logins := c.logins
+	c.mu.Unlock()
+	c.signingIn.Lock()
+	defer c.signingIn.Unlock()
+	c.mu.Lock()
+	if c.logins != logins || c.auth.AccessToken != stale {
+		err := c.loginErr
+		c.mu.Unlock()
+		return err
+	}
+	c.mu.Unlock()
+	token, err := login(ctx)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.logins++
+	c.loginErr = err
+	if err == nil {
+		c.auth.AccessToken = token
+	}
+	return err
+}
+
+func (c *Client) try(ctx context.Context, auth Auth, method, path string, body, out any) error {
 	var r io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -119,7 +209,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 	if err != nil {
 		return err
 	}
-	for k, v := range c.auth.Header() {
+	for k, v := range auth.Header() {
 		req.Header[k] = v
 	}
 	req.Header.Set("Accept", "application/json")
@@ -131,6 +221,9 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		return fmt.Errorf("%s: %w", locales.SiteUnreachable(), err)
 	}
 	defer res.Body.Close()
+	if loc, _ := res.Location(); res.StatusCode/100 == 3 && loc != nil && isAccessLogin(loc) {
+		return ErrAccessLogin
+	}
 	data, err := io.ReadAll(io.LimitReader(res.Body, 8<<20))
 	if err != nil {
 		return err
@@ -156,6 +249,11 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 	}
 	return nil
 }
+
+// ErrAccessLogin is the answer of a site behind Cloudflare Access to a
+// request it needs a sign-in for, when the client has no way to sign in
+// (SetAccessLogin).
+var ErrAccessLogin error = &msgError{locales.SiteAccessRequired}
 
 // errPage is the answer of a web page where the API was asked.
 var errPage error = &msgError{locales.SiteGotPage}

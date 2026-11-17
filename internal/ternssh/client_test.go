@@ -2,11 +2,14 @@ package ternssh
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestServerCredential(t *testing.T) {
@@ -91,5 +94,54 @@ func TestGroupsAndMove(t *testing.T) {
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("requests\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func TestAccessLogin(t *testing.T) {
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if c, err := r.Cookie("CF_Authorization"); err != nil || c.Value != "jwt2" {
+			http.Redirect(w, r, "https://team.cloudflareaccess.com/cdn-cgi/access/login/site?redirect_url=/", http.StatusFound)
+			return
+		}
+		io.WriteString(w, `{"user":{"id":"u1"},"authMode":"none"}`)
+	}))
+	defer site.Close()
+	ctx := context.Background()
+
+	c, _ := New(site.URL, Auth{AccessToken: "jwt1"})
+	if _, err := c.Me(ctx); err != ErrAccessLogin {
+		t.Fatalf("without a sign-in: %v", err)
+	}
+
+	var mu sync.Mutex
+	logins := 0
+	c.SetAccessLogin(func(context.Context) (string, error) {
+		mu.Lock()
+		logins++
+		mu.Unlock()
+		time.Sleep(50 * time.Millisecond)
+		return "jwt2", nil
+	})
+	var wg sync.WaitGroup
+	for range 5 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if me, err := c.Me(ctx); err != nil || me.User.ID != "u1" {
+				t.Errorf("me %+v, %v", me, err)
+			}
+		}()
+	}
+	wg.Wait()
+	if logins != 1 {
+		t.Errorf("signed in %d times, want once", logins)
+	}
+
+	// A sign-in the user gave up fails the requests waiting for it.
+	c, _ = New(site.URL, Auth{})
+	canceled := errors.New("canceled")
+	c.SetAccessLogin(func(context.Context) (string, error) { return "", canceled })
+	if _, err := c.Me(ctx); err != canceled {
+		t.Errorf("canceled sign-in: %v", err)
 	}
 }

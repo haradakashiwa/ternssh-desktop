@@ -170,13 +170,7 @@ func (m *Model) saveSite() {
 		return
 	}
 
-	auth := ternssh.Auth{}
-	if site.Auth == store.AuthBasic {
-		auth = ternssh.Auth{Username: site.Username, Password: secret}
-	} else if site.Auth == store.AuthAccess {
-		auth = ternssh.Auth{AccessClientID: site.ClientID, AccessClientSecret: secret}
-	}
-	client, err := ternssh.New(site.URL, auth)
+	client, err := m.newClient(site, secret)
 	if err != nil {
 		f.err = err.Error()
 		return

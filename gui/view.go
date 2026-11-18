@@ -284,7 +284,13 @@ type serverRowData struct {
 
 func (m *Model) serverRow(c *ui.Context, s *siteState, d serverRowData, open func(), menu func(*ui.Menu)) {
 	t := c.Theme()
-	row := ui.ButtonBase(c).Key(d.key).Padding(6, 8, 6, 8+float32(d.depth)*14+16).Gap(8).Radius(8).AlignItems(ui.Center).Label(d.name).
+	// With groups, a row's icon lines up with their folders, past the
+	// chevron; without, it starts at the edge.
+	indent := float32(d.depth) * 14
+	if len(s.groupIDs()) > 0 {
+		indent += 16
+	}
+	row := ui.ButtonBase(c).Key(d.key).Padding(6, 8, 6, 8+indent).Gap(8).Radius(8).AlignItems(ui.Center).Label(d.name).
 		Drag(d.drag)
 	// No highlight for the row chosen: it would read as the server the
 	// terminal shown is on.

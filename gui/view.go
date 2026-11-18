@@ -3,6 +3,7 @@ package gui
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -178,6 +179,11 @@ func (m *Model) sidebar(c *ui.Context, s *siteState) {
 			ui.Text(c, s.err).FontSize(11).TextColor(t.Danger).MaxLines(4).Padding(4, 8, 0, 8)
 		}
 
+		// Nothing to search in a tab without rows.
+		if s.searching() || len(s.tree)+len(s.local)+len(s.terminals)+len(s.groups) > 0 {
+			ui.SearchField(c, &s.query).Placeholder(locales.ViewSearch()).Label(locales.ViewSearch())
+		}
+
 		// Dropped outside the groups, a row goes to the top.
 		list := ui.Scroll(c).Grow(1).MinHeight(0).Radius(8)
 		if d, ok := ui.DragOver[dragged](list); ok && m.canPlace(s, d, "", len(m.siblings(s, "", d))) {
@@ -239,15 +245,34 @@ func (m *Model) siteServers(c *ui.Context, s *siteState) {
 		}
 		return
 	}
-	m.nodes(c, s, s.tree, "", 0)
+	if !slices.ContainsFunc(s.tree, func(n ternssh.Node) bool { return nodeMatches(s.query, n) }) {
+		emptyHint(c, locales.ViewSearchEmpty(strings.TrimSpace(s.query)))
+		return
+	}
+	m.nodes(c, s, s.tree, "", 0, false)
 }
 
-// nodes lists the nodes of a site's tree in the group parent.
-func (m *Model) nodes(c *ui.Context, s *siteState, nodes []ternssh.Node, parent string, depth int) {
+// nodeMatches reports whether a node of a site's tree matches the search
+// q, or for a group whether something in it does.
+func nodeMatches(q string, n ternssh.Node) bool {
+	if n.Type == "group" {
+		return filter(q, n.Name) || slices.ContainsFunc(n.Children, func(child ternssh.Node) bool { return nodeMatches(q, child) })
+	}
+	return filter(q, n.Name, n.Host, n.Username)
+}
+
+// nodes lists the nodes of a site's tree in the group parent: all of
+// them, or those that match the search.
+func (m *Model) nodes(c *ui.Context, s *siteState, nodes []ternssh.Node, parent string, depth int, all bool) {
 	for _, node := range nodes {
 		node := node
+		if !all && !nodeMatches(s.query, node) {
+			continue
+		}
 		if node.Type == "group" {
-			m.groupBlock(c, s, node.ID, node.Name, parent, countServers(node.Children), depth, func() { m.nodes(c, s, node.Children, node.ID, depth+1) })
+			// A group whose name matches shows everything in it.
+			in := all || filter(s.query, node.Name)
+			m.groupBlock(c, s, node.ID, node.Name, parent, countServers(node.Children), depth, func() { m.nodes(c, s, node.Children, node.ID, depth+1, in) })
 			continue
 		}
 		m.serverRow(c, s, serverRowData{
@@ -290,8 +315,11 @@ func (m *Model) serverRow(c *ui.Context, s *siteState, d serverRowData, open fun
 	if len(s.groupIDs()) > 0 {
 		indent += 16
 	}
-	row := ui.ButtonBase(c).Key(d.key).Padding(6, 8, 6, 8+indent).Gap(8).Radius(8).AlignItems(ui.Center).Label(d.name).
-		Drag(d.drag)
+	row := ui.ButtonBase(c).Key(d.key).Padding(6, 8, 6, 8+indent).Gap(8).Radius(8).AlignItems(ui.Center).Label(d.name)
+	// While searching, rows hidden would make where one is dropped unclear.
+	if !s.searching() {
+		row.Drag(d.drag)
+	}
 	// No highlight for the row chosen: it would read as the server the
 	// terminal shown is on.
 	if row.Hovered() {
@@ -352,25 +380,60 @@ func (m *Model) localServers(c *ui.Context, s *siteState) {
 		emptyHint(c, locales.ViewHomeEmpty())
 		return
 	}
-	m.homeTree(c, s, "", 0)
+	if !s.homeMatches("") {
+		emptyHint(c, locales.ViewSearchEmpty(strings.TrimSpace(s.query)))
+		return
+	}
+	m.homeTree(c, s, "", 0, false)
 }
 
-// homeTree lists what is in a group of the home tab, in its order.
-func (m *Model) homeTree(c *ui.Context, s *siteState, parent string, depth int) {
+// homeMatches reports whether something in a group of the home tab, or
+// at the top when empty, matches the search.
+func (s *siteState) homeMatches(parent string) bool {
+	for _, g := range s.groups {
+		if g.ParentID == parent && (filter(s.query, g.Name) || s.homeMatches(g.ID)) {
+			return true
+		}
+	}
+	for _, t := range s.terminals {
+		if t.GroupID == parent && filter(s.query, t.Name, t.Dir) {
+			return true
+		}
+	}
+	for _, srv := range s.local {
+		if srv.GroupID == parent && filter(s.query, srv.Name, srv.Host, srv.Username) {
+			return true
+		}
+	}
+	return false
+}
+
+// homeTree lists what is in a group of the home tab, in its order: all
+// of it, or what matches the search.
+func (m *Model) homeTree(c *ui.Context, s *siteState, parent string, depth int, all bool) {
 	for _, it := range store.Children(s.groups, s.terminals, s.local, parent) {
 		switch it.Kind {
 		case store.KindGroup:
 			if i := slices.IndexFunc(s.groups, func(g store.Group) bool { return g.ID == it.ID }); i >= 0 {
 				g := s.groups[i]
-				m.groupBlock(c, s, g.ID, g.Name, parent, s.homeCount(g.ID), depth, func() { m.homeTree(c, s, g.ID, depth+1) })
+				// A group whose name matches shows everything in it.
+				in := all || filter(s.query, g.Name)
+				if !in && !s.homeMatches(g.ID) {
+					continue
+				}
+				m.groupBlock(c, s, g.ID, g.Name, parent, s.homeCount(g.ID), depth, func() { m.homeTree(c, s, g.ID, depth+1, in) })
 			}
 		case store.KindTerminal:
 			if i := slices.IndexFunc(s.terminals, func(t store.Terminal) bool { return t.ID == it.ID }); i >= 0 {
-				m.terminalRow(c, s, s.terminals[i], parent, depth)
+				if t := s.terminals[i]; all || filter(s.query, t.Name, t.Dir) {
+					m.terminalRow(c, s, t, parent, depth)
+				}
 			}
 		case store.KindServer:
 			if i := slices.IndexFunc(s.local, func(srv store.Server) bool { return srv.ID == it.ID }); i >= 0 {
-				m.localRow(c, s, s.local[i], parent, depth)
+				if srv := s.local[i]; all || filter(s.query, srv.Name, srv.Host, srv.Username) {
+					m.localRow(c, s, srv, parent, depth)
+				}
 			}
 		}
 	}

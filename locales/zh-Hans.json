@@ -339,6 +339,8 @@
   "viewRemoveSiteTitle": "移除站点「{name}」？",
   "viewReopen": "重新打开",
   "viewResetHostKey": "重置主机密钥",
+  "viewSearch": "搜索",
+  "viewSearchEmpty": "没有与「{query}」匹配的内容",
   "viewSettings": "设置",
   "viewShellExited": "已退出",
   "viewShellRunning": "运行中",

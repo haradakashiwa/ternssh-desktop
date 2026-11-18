@@ -167,7 +167,11 @@ type siteState struct {
 	selected string // the server chosen in the sidebar
 
 	groupsOpen map[string]*bool
+	query      string // what the sidebar searches for
 }
+
+// searching reports whether the sidebar shows only what matches a search.
+func (s *siteState) searching() bool { return strings.TrimSpace(s.query) != "" }
 
 // home reports whether the tab is this machine's rather than a site's.
 func (s *siteState) home() bool { return s.site.ID == "" }

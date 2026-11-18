@@ -3728,6 +3728,32 @@ func (msgs Messages) ViewResetHostKey() string {
 	return Catalog.Format(msgs.locale, "viewResetHostKey", nil)
 }
 
+// ViewSearch says "Search"
+// in the language the app shows.
+//
+// Placeholder of the field at the top of the sidebar that filters its
+// servers, terminals and groups.
+func ViewSearch() string { return In(i18n.Locale()).ViewSearch() }
+
+// ViewSearch says "Search"
+// in the language of msgs.
+//
+// Placeholder of the field at the top of the sidebar that filters its
+// servers, terminals and groups.
+func (msgs Messages) ViewSearch() string {
+	return Catalog.Format(msgs.locale, "viewSearch", nil)
+}
+
+// ViewSearchEmpty says "Nothing matches “{query}”"
+// in the language the app shows.
+func ViewSearchEmpty(query string) string { return In(i18n.Locale()).ViewSearchEmpty(query) }
+
+// ViewSearchEmpty says "Nothing matches “{query}”"
+// in the language of msgs.
+func (msgs Messages) ViewSearchEmpty(query string) string {
+	return Catalog.Format(msgs.locale, "viewSearchEmpty", map[string]any{"query": query})
+}
+
 // ViewSettings says "Settings"
 // in the language the app shows.
 //

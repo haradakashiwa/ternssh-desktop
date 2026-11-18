@@ -91,13 +91,18 @@ func (m *Model) foldButton(c *ui.Context, s *siteState) {
 func (m *Model) groupBlock(c *ui.Context, s *siteState, id, name, parent string, count, depth int, children func()) {
 	t := c.Theme()
 	open := s.groupOpen(id)
+	// While searching, every group shown is open, to show what matches.
+	shown := *open || s.searching()
 	ui.Column(c).Key("gb:" + id).Children(func() {
 		row := ui.ButtonBase(c).Key("g:"+id).Height(28).Padding(0, 8, 0, 8+float32(depth)*14).Gap(6).Radius(7).
-			AlignItems(ui.Center).Label(name).Drag(dragged{s, store.KindGroup, id})
+			AlignItems(ui.Center).Label(name)
+		if !s.searching() {
+			row.Drag(dragged{s, store.KindGroup, id})
+		}
 		if row.Hovered() {
 			row.Background(hover(c))
 		}
-		if row.Clicked() {
+		if row.Clicked() && !s.searching() {
 			*open = !*open
 		}
 		m.dropOn(c, s, row, dragged{s, store.KindGroup, id}, parent)
@@ -132,7 +137,7 @@ func (m *Model) groupBlock(c *ui.Context, s *siteState, id, name, parent string,
 		})
 		row.Children(func() {
 			rot := float32(0)
-			if *open {
+			if shown {
 				rot = 90
 			}
 			ui.Icon(c, chevronIcon).Size(10, 10).TextColor(t.TextMuted).Rotate(rot)
@@ -140,7 +145,7 @@ func (m *Model) groupBlock(c *ui.Context, s *siteState, id, name, parent string,
 			ui.Text(c, name).FontSize(13).SingleLine().Grow(1).MinWidth(0)
 			ui.Textf(c, "%d", count).FontSize(11).TextColor(t.TextMuted)
 		})
-		if *open {
+		if shown {
 			children()
 		}
 	})

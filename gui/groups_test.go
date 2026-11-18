@@ -4,6 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/egoist/mygo/ui"
+
 	"ternssh-desktop/internal/store"
 )
 
@@ -49,5 +51,47 @@ func TestConnectGroup(t *testing.T) {
 	}
 	if n := home.serverCount("b"); n != 1 {
 		t.Errorf("%d servers in the subgroup, want 1", n)
+	}
+}
+
+func TestSidebarSearch(t *testing.T) {
+	m, st := testModel(t)
+	withSites(t, m, st)
+	tt := ui.NewTester(m.View, 1100, 700)
+	s := m.sites[1]
+
+	// A server by its address: its group shows, the rest does not.
+	s.query = "10.0.0.12"
+	tt.Frame()
+	snapshot(t, tt, "search")
+	if !tt.HasText("web-02") || !tt.HasText("Web 集群") || tt.HasText("web-01") || tt.HasText("数据库主库") {
+		t.Errorf("searching an address: %q", tt.Texts())
+	}
+
+	// A group by its name: everything in it, even closed.
+	*s.groupOpen("g1") = false
+	s.query = "web 集群"
+	tt.Frame()
+	if !tt.HasText("web-01") || !tt.HasText("web-02") || tt.HasText("数据库主库") {
+		t.Errorf("searching a group: %q", tt.Texts())
+	}
+
+	s.query = "nope"
+	tt.Frame()
+	if !tt.HasText("没有与「nope」匹配的内容") {
+		t.Errorf("searching nothing: %q", tt.Texts())
+	}
+
+	// At home, by a user name.
+	m.active = 0
+	m.sites[0].query = "PI"
+	tt.Frame()
+	if !tt.HasText("办公室树莓派") {
+		t.Errorf("searching at home: %q", tt.Texts())
+	}
+	m.sites[0].query = "root"
+	tt.Frame()
+	if tt.HasText("办公室树莓派") {
+		t.Errorf("searching at home: %q", tt.Texts())
 	}
 }

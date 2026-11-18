@@ -587,6 +587,11 @@
     "description": "The button that opens a local terminal again after its shell ended."
   },
   "viewResetHostKey": "Reset Host Key",
+  "viewSearch": "Search",
+  "@viewSearch": {
+    "description": "Placeholder of the field at the top of the sidebar that filters its servers, terminals and groups."
+  },
+  "viewSearchEmpty": "Nothing matches “{query}”",
   "viewSettings": "Settings",
   "@viewSettings": {
     "description": "The button in the title bar that opens the settings."

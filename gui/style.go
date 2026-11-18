@@ -35,6 +35,7 @@ var (
 	settingsIcon    = icon(`<path d="M2.5 4.5h6.5M13 4.5h.5M2.5 11.5h.5M7 11.5h6.5"/><circle cx="11" cy="4.5" r="1.75"/><circle cx="5" cy="11.5" r="1.75"/>`)
 	zapIcon         = icon(`<path d="M9 1.5L3.5 9h4l-1 5.5L12.5 7h-4z"/>`)
 	panelBottomIcon = icon(`<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M2 9.5h12"/>`)
+	checkIcon       = icon(`<path d="M3 8.5l3 3 7-7"/>`)
 	keyIcon         = icon(`<circle cx="5.5" cy="10.5" r="3"/><path d="M7.6 8.4L13.5 2.5M11.5 4.5l1.5 1.5"/>`)
 )
 

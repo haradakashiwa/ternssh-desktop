@@ -1051,7 +1051,7 @@ func TestTerminalSnapshot(t *testing.T) {
 	m, st := testModel(t)
 	withSites(t, m, st)
 	m.active = 0
-	m.backend.NewTerminal = func(conn Conn) (*terminal.Terminal, error) {
+	m.backend.NewTerminal = func(conn Conn, _ TermEvents) (*terminal.Terminal, error) {
 		return terminal.New(terminal.Options{Conn: conn, Transparent: true, Padding: terminal.Padding{X: 10, Y: 8}})
 	}
 	m.backend.Dial = func(sshconn.LocalOptions, sshconn.Events) Conn {

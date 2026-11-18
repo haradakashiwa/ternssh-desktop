@@ -25,6 +25,8 @@ func (m *Model) View(c *ui.Context) {
 		c.Root().Background(t.Background)
 	}
 
+	m.markSeen()
+
 	// The keys of a shortcut being recorded are its own.
 	if m.settings.recording == "" {
 		m.handleShortcuts(c)
@@ -140,8 +142,15 @@ func (m *Model) tabLabel(c *ui.Context, s *siteState, active bool) {
 		text.TextColor(t.TextMuted)
 	}
 	if n := len(s.sessions); n > 0 {
-		ui.Box(c).Padding(0, 6).Radius(8).Background(hover(c)).Children(func() {
-			ui.Textf(c, "%d", n).FontSize(11).TextColor(t.TextMuted)
+		// Sessions whose agent asks to be looked at color the count.
+		badge := ui.Box(c).Padding(0, 6).Radius(8).Background(hover(c))
+		color := t.TextMuted
+		if s.attention() > 0 {
+			badge.Background(attentionColor)
+			color = ui.RGB(255, 255, 255)
+		}
+		badge.Children(func() {
+			ui.Textf(c, "%d", n).FontSize(11).TextColor(color)
 		})
 	}
 }
@@ -545,6 +554,9 @@ func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 			closed := -1
 			for i, sess := range s.sessions {
 				tab := ui.ButtonBase(c).Key(sess.id).Height(28).Padding(0, 4, 0, 10).Gap(7).Radius(8).AlignItems(ui.Center).MaxWidth(240).Label(sess.title)
+				if tip := agentTip(sess.agent); tip != "" {
+					tab.Tooltip(tip)
+				}
 				if i == s.current {
 					tab.Background(selected(c)).Shadow(0, 1, 4, 0, ui.RGBA(0, 0, 0, 0.10))
 				} else if tab.Hovered() {
@@ -572,7 +584,7 @@ func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 					}
 				})
 				tab.Children(func() {
-					dot(c, sessionColor(sess.status))
+					agentMark(c, sess)
 					text := ui.Text(c, sess.title).FontSize(12).SingleLine().MinWidth(0).Shrink(1)
 					if i != s.current {
 						text.TextColor(t.TextMuted)

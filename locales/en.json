@@ -5,6 +5,25 @@
     "description": "Title of the window where the user signs in to a site's Cloudflare Access."
   },
   "add": "Add",
+  "agentDoneTitle": "{name} finished",
+  "@agentDoneTitle": {
+    "description": "Title of the desktop notification when a coding agent in a terminal, as Claude Code, finished its turn."
+  },
+  "agentTipDone": "{name} finished: {task}",
+  "agentTipIdle": "{name}: {task}",
+  "@agentTipIdle": {
+    "description": "Tooltip of a terminal tab with a coding agent that waits for a prompt: its name and what its title says it works on."
+  },
+  "agentTipRunning": "{name} is working: {task}",
+  "agentTipWaiting": "{name} needs your input: {task}",
+  "agentWaitingTitle": "{name} needs your input",
+  "@agentWaitingTitle": {
+    "description": "Title of the desktop notification when a coding agent in a terminal asks the user, as for a permission."
+  },
+  "agentWorking": "{name} is working",
+  "@agentWorking": {
+    "description": "Accessibility label of the spinner on a terminal tab whose coding agent works."
+  },
   "appDownloadTo": "Download To",
   "@appDownloadTo": {
     "description": "Title of the save dialog for a download."

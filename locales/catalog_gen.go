@@ -60,6 +60,104 @@ func (msgs Messages) Add() string {
 	return Catalog.Format(msgs.locale, "add", nil)
 }
 
+// AgentDoneTitle says "{name} finished"
+// in the language the app shows.
+//
+// Title of the desktop notification when a coding agent in a terminal, as
+// Claude Code, finished its turn.
+func AgentDoneTitle(name string) string { return In(i18n.Locale()).AgentDoneTitle(name) }
+
+// AgentDoneTitle says "{name} finished"
+// in the language of msgs.
+//
+// Title of the desktop notification when a coding agent in a terminal, as
+// Claude Code, finished its turn.
+func (msgs Messages) AgentDoneTitle(name string) string {
+	return Catalog.Format(msgs.locale, "agentDoneTitle", map[string]any{"name": name})
+}
+
+// AgentTipDone says "{name} finished: {task}"
+// in the language the app shows.
+func AgentTipDone(name string, task string) string { return In(i18n.Locale()).AgentTipDone(name, task) }
+
+// AgentTipDone says "{name} finished: {task}"
+// in the language of msgs.
+func (msgs Messages) AgentTipDone(name string, task string) string {
+	return Catalog.Format(msgs.locale, "agentTipDone", map[string]any{"name": name, "task": task})
+}
+
+// AgentTipIdle says "{name}: {task}"
+// in the language the app shows.
+//
+// Tooltip of a terminal tab with a coding agent that waits for a prompt:
+// its name and what its title says it works on.
+func AgentTipIdle(name string, task string) string { return In(i18n.Locale()).AgentTipIdle(name, task) }
+
+// AgentTipIdle says "{name}: {task}"
+// in the language of msgs.
+//
+// Tooltip of a terminal tab with a coding agent that waits for a prompt:
+// its name and what its title says it works on.
+func (msgs Messages) AgentTipIdle(name string, task string) string {
+	return Catalog.Format(msgs.locale, "agentTipIdle", map[string]any{"name": name, "task": task})
+}
+
+// AgentTipRunning says "{name} is working: {task}"
+// in the language the app shows.
+func AgentTipRunning(name string, task string) string {
+	return In(i18n.Locale()).AgentTipRunning(name, task)
+}
+
+// AgentTipRunning says "{name} is working: {task}"
+// in the language of msgs.
+func (msgs Messages) AgentTipRunning(name string, task string) string {
+	return Catalog.Format(msgs.locale, "agentTipRunning", map[string]any{"name": name, "task": task})
+}
+
+// AgentTipWaiting says "{name} needs your input: {task}"
+// in the language the app shows.
+func AgentTipWaiting(name string, task string) string {
+	return In(i18n.Locale()).AgentTipWaiting(name, task)
+}
+
+// AgentTipWaiting says "{name} needs your input: {task}"
+// in the language of msgs.
+func (msgs Messages) AgentTipWaiting(name string, task string) string {
+	return Catalog.Format(msgs.locale, "agentTipWaiting", map[string]any{"name": name, "task": task})
+}
+
+// AgentWaitingTitle says "{name} needs your input"
+// in the language the app shows.
+//
+// Title of the desktop notification when a coding agent in a terminal asks
+// the user, as for a permission.
+func AgentWaitingTitle(name string) string { return In(i18n.Locale()).AgentWaitingTitle(name) }
+
+// AgentWaitingTitle says "{name} needs your input"
+// in the language of msgs.
+//
+// Title of the desktop notification when a coding agent in a terminal asks
+// the user, as for a permission.
+func (msgs Messages) AgentWaitingTitle(name string) string {
+	return Catalog.Format(msgs.locale, "agentWaitingTitle", map[string]any{"name": name})
+}
+
+// AgentWorking says "{name} is working"
+// in the language the app shows.
+//
+// Accessibility label of the spinner on a terminal tab whose coding agent
+// works.
+func AgentWorking(name string) string { return In(i18n.Locale()).AgentWorking(name) }
+
+// AgentWorking says "{name} is working"
+// in the language of msgs.
+//
+// Accessibility label of the spinner on a terminal tab whose coding agent
+// works.
+func (msgs Messages) AgentWorking(name string) string {
+	return Catalog.Format(msgs.locale, "agentWorking", map[string]any{"name": name})
+}
+
 // AppDownloadTo says "Download To"
 // in the language the app shows.
 //

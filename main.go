@@ -92,24 +92,40 @@ func main() {
 		}
 		model = gui.New(st, gui.Backend{
 			Update: func(fn func()) { win.Update(fn) },
-			NewTerminal: func(conn gui.Conn) (*terminal.Terminal, error) {
+			NewTerminal: func(conn gui.Conn, ev gui.TermEvents) (*terminal.Terminal, error) {
 				return terminal.New(terminal.Options{
 					Conn:        conn,
 					Transparent: true,
 					Padding:     terminal.Padding{X: 10, Y: 8},
 					OnKey:       model.TerminalKey,
+					OnTitle:     ev.OnTitle,
+					OnNotify:    ev.OnNotify,
+					OnBell:      ev.OnBell,
 				})
 			},
-			NewShell: func(dir string, onExit func(int)) (*terminal.Terminal, error) {
+			NewShell: func(dir string, ev gui.TermEvents) (*terminal.Terminal, error) {
 				return terminal.New(terminal.Options{
 					Dir:              dir,
 					ShellIntegration: true,
 					Transparent:      true,
 					Padding:          terminal.Padding{X: 10, Y: 8},
 					OnKey:            model.TerminalKey,
-					OnExit:           onExit,
+					OnTitle:          ev.OnTitle,
+					OnNotify:         ev.OnNotify,
+					OnBell:           ev.OnBell,
+					OnExit:           ev.OnExit,
 				})
 			},
+			Notify: func(title, body string, onClick func()) {
+				n := mygo.NewNotification(mygo.NotificationOptions{Title: title, Body: body})
+				n.OnClick(func() {
+					show()
+					win.Update(onClick)
+				})
+				go n.Show() // the first asks the user to allow them, and waits
+			},
+			Active:   mygo.App.IsActive,
+			SetBadge: mygo.App.SetBadgeCount,
 			Dial: func(opts sshconn.LocalOptions, ev sshconn.Events) gui.Conn {
 				return sshconn.DialLocal(opts, ev)
 			},

@@ -47,11 +47,19 @@ type Conn interface {
 type Backend struct {
 	// Update runs fn on the main thread and builds the view again.
 	Update func(fn func())
-	// NewTerminal makes the terminal of a connection.
-	NewTerminal func(conn Conn) (*terminal.Terminal, error)
+	// NewTerminal makes the terminal of a connection, which tells ev what
+	// the program in it does.
+	NewTerminal func(conn Conn, ev TermEvents) (*terminal.Terminal, error)
 	// NewShell makes a terminal of a shell of this machine, started in
-	// dir, which tells onExit when it ends.
-	NewShell func(dir string, onExit func(code int)) (*terminal.Terminal, error)
+	// dir, which tells ev what the program in it does, and when it ends.
+	NewShell func(dir string, ev TermEvents) (*terminal.Terminal, error)
+	// Notify shows a desktop notification, which runs onClick when
+	// clicked; nil shows none.
+	Notify func(title, body string, onClick func())
+	// Active reports whether the app is in front; nil when it always is.
+	Active func() bool
+	// SetBadge shows n on the app's icon, none for zero; nil shows none.
+	SetBadge func(n int)
 	// Dial connects to a server.
 	Dial func(opts sshconn.LocalOptions, ev sshconn.Events) Conn
 	// PickFile asks for a file, as a private key to import; nil for none.
@@ -107,6 +115,7 @@ type Model struct {
 
 	sites  []*siteState
 	active int
+	badge  int // what the app's icon shows
 
 	siteForm       siteForm
 	siteFormOpen   bool
@@ -197,6 +206,8 @@ type session struct {
 	files                  *filesState // the files panel, once shown
 	stats                  statsSource // the server's status, sampled once the panel shows
 	iface                  string      // the network interface its status shows
+
+	agent agent // the coding agent in it, as Claude Code
 }
 
 // New returns the model of the window: the home tab, then the sites of st.
@@ -460,7 +471,7 @@ func (m *Model) open(s *siteState, sess *session, dial func(sshconn.Events) Conn
 		OnDir: func(path string) { m.update(func() { sess.dir = path }) },
 	})
 	if m.backend.NewTerminal != nil {
-		term, err := m.backend.NewTerminal(sess.conn)
+		term, err := m.backend.NewTerminal(sess.conn, m.termEvents(s, sess))
 		if err != nil {
 			sess.conn.Close()
 			m.notify(locales.ModelTerminalCreateFailed(err.Error()))
@@ -486,9 +497,9 @@ func (m *Model) openShell(s *siteState, t store.Terminal) {
 		showBottom: true,
 	}
 	if m.backend.NewShell != nil {
-		term, err := m.backend.NewShell(expandHome(t.Dir), func(int) {
-			m.update(func() { sess.status = sshconn.StatusClosed })
-		})
+		ev := m.termEvents(s, sess)
+		ev.OnExit = func(int) { m.update(func() { sess.status = sshconn.StatusClosed }) }
+		term, err := m.backend.NewShell(expandHome(t.Dir), ev)
 		if err != nil {
 			m.notify(locales.ModelTerminalOpenFailed(err.Error()))
 			return

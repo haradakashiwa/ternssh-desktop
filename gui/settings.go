@@ -132,6 +132,7 @@ func (m *Model) generalSettings(c *ui.Context) {
 				ui.Text(c, locales.SettingsCommandTargetHint()).FontSize(11).TextColor(c.Theme().TextMuted)
 			})
 		})
+		m.updateField(c)
 	})
 	errorText(c, f.err)
 	if st := m.store.Settings(); st.QuitOnClose != (f.closeAction == 1) || st.Language != languages[f.language] ||
@@ -146,6 +147,32 @@ func (m *Model) generalSettings(c *ui.Context) {
 			m.backend.SetLanguage(st.Language)
 		}
 	}
+}
+
+// updateField shows the app's version, and checks for new ones.
+func (m *Model) updateField(c *ui.Context) {
+	u := m.backend.Updates
+	if u == nil {
+		return
+	}
+	ui.Field(c, locales.SettingsUpdates(), func() {
+		ui.Column(c).Gap(8).Children(func() {
+			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+				if v := u.Available(); v != "" {
+					ui.Text(c, locales.SettingsUpdateAvailable(v)).TextColor(accentInk(c))
+				} else {
+					ui.Text(c, locales.SettingsVersion(m.backend.Version))
+				}
+				if ui.Button(c, locales.SettingsCheckUpdates()).Clicked() {
+					u.Check()
+				}
+			})
+			auto := u.Automatic()
+			if ui.Checkbox(c, &auto, locales.SettingsAutoUpdate()).Changed() {
+				u.SetAutomatic(auto)
+			}
+		})
+	})
 }
 
 func (m *Model) shortcutSettings(c *ui.Context) {

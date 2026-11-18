@@ -16,6 +16,8 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/plugins/updater"
+	updaterui "github.com/egoist/mygo/plugins/updater/native"
 	"github.com/egoist/mygo/ui"
 
 	"ternssh-desktop/gui"
@@ -47,6 +49,11 @@ func main() {
 
 	// The language chosen in the settings, or the system's.
 	mygo.App.SetLocale(st.Settings().Language)
+
+	// New versions come from the releases on GitHub (updates in
+	// mygo.json): checked in the background once a day, and installed
+	// from the update window, which relaunches the app.
+	mygo.Use(updaterui.Plugin)
 
 	mygo.App.WhenReady(func() {
 		var win *mygo.Window
@@ -151,6 +158,13 @@ func main() {
 			},
 			SetLanguage: mygo.App.SetLocale,
 			AccessLogin: accessLogin,
+			Version:     mygo.App.Version(),
+			Updates: &gui.Updates{
+				Check:        updater.CheckForUpdates,
+				Automatic:    updater.AutomaticChecks,
+				SetAutomatic: updater.SetAutomaticChecks,
+				Available:    updater.AvailableVersion,
+			},
 			SetHotkey: func(acc string) error {
 				hotkey.Lock()
 				defer hotkey.Unlock()
@@ -215,6 +229,7 @@ func main() {
 					show()
 					win.Update(model.OpenSettings)
 				}},
+				updater.MenuItem(),
 				mygo.Separator(),
 				{Label: locales.TrayQuit(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
 			})
@@ -229,6 +244,8 @@ func main() {
 		if err != nil {
 			log.Print("tray: ", err)
 		}
+		// The settings show the version a check found.
+		updater.OnChange(func() { win.Update(func() {}) })
 		mygo.App.OnLocaleChanged(func(string) {
 			if tray != nil {
 				tray.SetMenu(trayMenu())

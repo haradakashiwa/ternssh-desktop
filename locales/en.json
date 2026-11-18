@@ -306,6 +306,11 @@
   },
   "serverPassphrasePlaceholder": "Leave blank if not encrypted",
   "serverSiteHint": "The server and its credentials are saved to the site and sync to the web and your other devices. To connect, this machine gets the credentials from the site and opens SSH directly.",
+  "settingsAutoUpdate": "Check for updates automatically",
+  "@settingsAutoUpdate": {
+    "description": "A check box: check GitHub for a new version once a day."
+  },
+  "settingsCheckUpdates": "Check for Updates…",
   "settingsCommandTarget": "Send Quick Commands To",
   "@settingsCommandTarget": {
     "description": "Settings: where a quick command clicked is sent."
@@ -341,6 +346,12 @@
   "settingsQuitApp": "Quit App",
   "settingsShortcuts": "Shortcuts",
   "settingsTitle": "Settings",
+  "settingsUpdateAvailable": "Version {version} is available",
+  "settingsUpdates": "Updates",
+  "settingsVersion": "Version {version}",
+  "@settingsVersion": {
+    "description": "The version of the app that runs."
+  },
   "shortcutErrTaken": "{shortcut} is already the shortcut of {name}",
   "shortcutFieldLabel": "{name} shortcut",
   "@shortcutFieldLabel": {

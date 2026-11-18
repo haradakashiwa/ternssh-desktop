@@ -2030,6 +2030,30 @@ func (msgs Messages) ServerSiteHint() string {
 	return Catalog.Format(msgs.locale, "serverSiteHint", nil)
 }
 
+// SettingsAutoUpdate says "Check for updates automatically"
+// in the language the app shows.
+//
+// A check box: check GitHub for a new version once a day.
+func SettingsAutoUpdate() string { return In(i18n.Locale()).SettingsAutoUpdate() }
+
+// SettingsAutoUpdate says "Check for updates automatically"
+// in the language of msgs.
+//
+// A check box: check GitHub for a new version once a day.
+func (msgs Messages) SettingsAutoUpdate() string {
+	return Catalog.Format(msgs.locale, "settingsAutoUpdate", nil)
+}
+
+// SettingsCheckUpdates says "Check for Updates…"
+// in the language the app shows.
+func SettingsCheckUpdates() string { return In(i18n.Locale()).SettingsCheckUpdates() }
+
+// SettingsCheckUpdates says "Check for Updates…"
+// in the language of msgs.
+func (msgs Messages) SettingsCheckUpdates() string {
+	return Catalog.Format(msgs.locale, "settingsCheckUpdates", nil)
+}
+
 // SettingsCommandTarget says "Send Quick Commands To"
 // in the language the app shows.
 //
@@ -2222,6 +2246,42 @@ func SettingsTitle() string { return In(i18n.Locale()).SettingsTitle() }
 // in the language of msgs.
 func (msgs Messages) SettingsTitle() string {
 	return Catalog.Format(msgs.locale, "settingsTitle", nil)
+}
+
+// SettingsUpdateAvailable says "Version {version} is available"
+// in the language the app shows.
+func SettingsUpdateAvailable(version string) string {
+	return In(i18n.Locale()).SettingsUpdateAvailable(version)
+}
+
+// SettingsUpdateAvailable says "Version {version} is available"
+// in the language of msgs.
+func (msgs Messages) SettingsUpdateAvailable(version string) string {
+	return Catalog.Format(msgs.locale, "settingsUpdateAvailable", map[string]any{"version": version})
+}
+
+// SettingsUpdates says "Updates"
+// in the language the app shows.
+func SettingsUpdates() string { return In(i18n.Locale()).SettingsUpdates() }
+
+// SettingsUpdates says "Updates"
+// in the language of msgs.
+func (msgs Messages) SettingsUpdates() string {
+	return Catalog.Format(msgs.locale, "settingsUpdates", nil)
+}
+
+// SettingsVersion says "Version {version}"
+// in the language the app shows.
+//
+// The version of the app that runs.
+func SettingsVersion(version string) string { return In(i18n.Locale()).SettingsVersion(version) }
+
+// SettingsVersion says "Version {version}"
+// in the language of msgs.
+//
+// The version of the app that runs.
+func (msgs Messages) SettingsVersion(version string) string {
+	return Catalog.Format(msgs.locale, "settingsVersion", map[string]any{"version": version})
 }
 
 // ShortcutErrTaken says "{shortcut} is already the shortcut of {name}"

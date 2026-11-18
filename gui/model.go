@@ -81,6 +81,23 @@ type Backend struct {
 	// It is called from another goroutine than the main thread, and nil
 	// leaves requests that need a sign-in to fail.
 	AccessLogin func(ctx context.Context, siteURL string) (token string, err error)
+	// Version is the app's, as "0.2.0".
+	Version string
+	// Updates checks GitHub's releases for new versions; nil hides the
+	// settings of updates.
+	Updates *Updates
+}
+
+// Updates is the app's updater, whose window installs a new version.
+type Updates struct {
+	// Check shows the update window, which checks at once.
+	Check func()
+	// Automatic reports whether the app checks in the background, once a
+	// day, and SetAutomatic turns it on or off.
+	Automatic    func() bool
+	SetAutomatic func(on bool)
+	// Available is the newer version the last check found, or "".
+	Available func() string
 }
 
 // Model is the state of the window.

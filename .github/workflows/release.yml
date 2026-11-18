@@ -6,6 +6,14 @@
 # macOS builds a universal .dmg, to which scripts/dmg.sh gives its
 # background, and cross-compiles the Windows apps, whose installers NSIS
 # makes. Neither is signed with a developer certificate.
+#
+# Each build is also signed for the app's updater with the key of
+# `go tool mygo keygen`, which the MYGO_UPDATER_PRIVATE_KEY secret holds:
+#
+#   gh secret set MYGO_UPDATER_PRIVATE_KEY < "…/mygo/update-keys/mygo-update.key"
+#
+# Installed apps read update-<platform>.json from the latest release, and
+# download the archive or delta it names.
 
 name: Release
 
@@ -45,7 +53,17 @@ jobs:
         run: brew install makensis
 
       - name: Build
-        run: go tool mygo build -platform darwin/universal,windows/amd64,windows/arm64
+        env:
+          # Signs the updates, and lets mygo find the published ones,
+          # from which it makes delta updates.
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$MYGO_UPDATER_PRIVATE_KEY" ]; then
+            echo "::error::MYGO_UPDATER_PRIVATE_KEY is not set: installed apps could not update to this release"
+            exit 1
+          fi
+          go tool mygo build -platform darwin/universal,windows/amd64,windows/arm64
 
       - name: Give the disk image its background
         run: scripts/dmg.sh build/darwin-universal
@@ -59,7 +77,16 @@ jobs:
             cp "$dir/ternssh-setup-$VERSION-$arch.exe" "dist/ternssh-$VERSION-windows-$arch-setup.exe"
             # The portable app: the executable and what ships beside it.
             (cd "$dir" && zip -q "$GITHUB_WORKSPACE/dist/ternssh-$VERSION-windows-$arch-portable.zip" \
-              $(ls | grep -v -e '^ternssh-setup-' -e '^\.mygo-files$'))
+              $(ls | grep -v -e '^ternssh-setup-' -e '^\.mygo-files$' -e '\.tar\.gz$' -e '\.delta$' \
+                -e '^update-.*\.json$' -e '^install\.ps1$'))
+          done
+          # The updates: each platform's archive, its deltas from earlier
+          # versions, and the manifest that installed apps check.
+          for dir in build/darwin-universal build/windows-amd64 build/windows-arm64; do
+            for f in "$dir"/*.tar.gz "$dir"/*.delta "$dir"/update-*.json; do
+              if [ -e "$f" ]; then cp "$f" dist/; fi
+            done
+            ls "$dir"/update-*.json > /dev/null || { echo "::error::no update manifest in $dir"; exit 1; }
           done
           ls -l dist
 
@@ -69,4 +96,7 @@ jobs:
         run: |
           prerelease=""
           case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" dist/* --title "ternssh $VERSION" --generate-notes $prerelease
+          # A draft until every file is there, so that apps never read a
+          # latest release without its manifests.
+          gh release create "$GITHUB_REF_NAME" dist/* --draft --title "ternssh $VERSION" --generate-notes $prerelease
+          gh release edit "$GITHUB_REF_NAME" --draft=false

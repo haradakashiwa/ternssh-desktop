@@ -33,3 +33,4 @@ The builds are not signed with a developer certificate: on macOS, right-click th
 - **Server status**: live CPU, memory, disk, network and process monitoring (Linux).
 - **Tray and global hotkey**: closing the window keeps the app in the tray, and a hotkey brings it back.
 - **Languages**: Simplified Chinese and English, following the system by default, switchable in the settings.
+- **Updates**: checks this repository's releases once a day, or from the settings and the tray, and installs a new version in the app, then relaunches.

@@ -120,6 +120,36 @@ func TestSettings(t *testing.T) {
 	}
 }
 
+func TestUpdateSettings(t *testing.T) {
+	m, _ := testModel(t)
+	checks, auto, available := 0, true, ""
+	m.backend.Version = "0.1.0"
+	m.backend.Updates = &Updates{
+		Check:        func() { checks++ },
+		Automatic:    func() bool { return auto },
+		SetAutomatic: func(on bool) { auto = on },
+		Available:    func() string { return available },
+	}
+	tt := ui.NewTester(m.View, 1100, 700)
+	m.OpenSettings()
+	tt.Frame()
+	if !tt.HasText("版本 0.1.0") {
+		t.Fatalf("the version is not shown: %q", tt.Texts())
+	}
+	if err := tt.Click("检查更新…"); err != nil || checks != 1 {
+		t.Fatalf("checks %d, %v", checks, err)
+	}
+	if err := tt.Click("自动检查更新"); err != nil || auto {
+		t.Fatalf("automatic checks %v, %v", auto, err)
+	}
+	available = "0.2.0"
+	tt.Frame()
+	if !tt.HasText("新版本 0.2.0 可用") {
+		t.Fatalf("the update is not shown: %q", tt.Texts())
+	}
+	snapshot(t, tt, "settings-updates")
+}
+
 func TestHotkeyNames(t *testing.T) {
 	if ui.KeyZ-ui.KeyA != 25 || ui.Key9-ui.Key0 != 9 || ui.KeyF12-ui.KeyF1 != 11 {
 		t.Fatal("the keys are not in order")

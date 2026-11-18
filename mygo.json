@@ -11,5 +11,9 @@
   "i18n": {
     "dir": "locales",
     "source": "en"
+  },
+  "updates": {
+    "publicKey": "ZLLj2G+VbcLaJIUYQmCc695hmeFI7d7qV5ixVjcFrSc=",
+    "github": "haradakashiwa/ternssh-desktop"
   }
 }

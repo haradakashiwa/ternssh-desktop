@@ -6,6 +6,7 @@ import (
 
 const (
 	titleBarHeight = 52 // the height of the inset title bar, which holds the site tabs
+	siteTabHeight  = 32 // the height of a site tab in the title bar
 	sidebarWidth   = 264
 )
 

@@ -55,36 +55,41 @@ func (m *Model) View(c *ui.Context) {
 // titleBar holds the tabs of the sites, after the window controls.
 func (m *Model) titleBar(c *ui.Context) {
 	tb := c.TitleBar()
-	ui.Row(c).Height(titleBarHeight).Shrink(0).AlignItems(ui.Center).Gap(6).
-		Padding(0, tb.Right+12, 0, tb.Left+12).DragWindow().Children(func() {
-		ui.Row(c).Gap(4).AlignItems(ui.Center).MinWidth(0).Shrink(1).ClipX().Children(func() {
+	// The tabs wrap onto more lines when they do not fit; the first line
+	// stays beside the window controls and the bar grows to hold the rest.
+	pad := float32(titleBarHeight-siteTabHeight) / 2
+	ui.Row(c).MinHeight(titleBarHeight).Shrink(0).AlignItems(ui.Start).Gap(6).
+		Padding(pad, tb.Right+12, pad, tb.Left+12).DragWindow().Children(func() {
+		ui.Row(c).Wrap().Gap(4).AlignItems(ui.Center).MinWidth(0).Shrink(1).Children(func() {
 			for i, s := range m.sites {
 				m.siteTab(c, i, s)
 			}
+			if iconButton(c, plusIcon, locales.ViewAddSite()).Clicked() {
+				m.openSiteForm(nil)
+			}
 		})
-		if iconButton(c, plusIcon, locales.ViewAddSite()).Clicked() {
-			m.openSiteForm(nil)
-		}
 		ui.Spacer(c)
-		if s := m.current(); !s.home() {
-			b := iconButton(c, refreshIcon, locales.ViewRefreshFromSite())
-			if s.loading {
-				b.Disabled(true)
+		ui.Row(c).Height(siteTabHeight).Shrink(0).Gap(6).AlignItems(ui.Center).Children(func() {
+			if s := m.current(); !s.home() {
+				b := iconButton(c, refreshIcon, locales.ViewRefreshFromSite())
+				if s.loading {
+					b.Disabled(true)
+				}
+				if b.Clicked() {
+					m.refresh(s)
+				}
 			}
-			if b.Clicked() {
-				m.refresh(s)
+			if iconButton(c, settingsIcon, locales.ViewSettings()).Clicked() {
+				m.OpenSettings()
 			}
-		}
-		if iconButton(c, settingsIcon, locales.ViewSettings()).Clicked() {
-			m.OpenSettings()
-		}
+		})
 	})
 }
 
 func (m *Model) siteTab(c *ui.Context, i int, s *siteState) {
 	t := c.Theme()
 	active := i == m.active
-	tab := ui.ButtonBase(c).Key(s.site.ID).Height(32).Padding(0, 10, 0, 12).Radius(10).Gap(8).
+	tab := ui.ButtonBase(c).Key(s.site.ID).Height(siteTabHeight).Padding(0, 10, 0, 12).Radius(10).Gap(8).
 		AlignItems(ui.Center).MinWidth(120).MaxWidth(220).Label(s.displayName())
 	switch {
 	case active:
@@ -538,78 +543,80 @@ func (m *Model) workspace(c *ui.Context, s *siteState) {
 }
 
 func (m *Model) sessionTabs(c *ui.Context, s *siteState) {
-	ui.Row(c).Shrink(0).AlignItems(ui.Center).Padding(0, 8, 0, 0).Gap(2).Children(func() {
+	ui.Row(c).Shrink(0).AlignItems(ui.Start).Padding(0, 8, 0, 0).Gap(2).Children(func() {
 		m.tabStrip(c, s)
 		if s.current >= 0 && s.current < len(s.sessions) {
-			m.panelButtons(c, s.sessions[s.current])
+			// Beside the first line of tabs.
+			ui.Row(c).Height(40).Shrink(0).Gap(2).AlignItems(ui.Center).Children(func() {
+				m.panelButtons(c, s.sessions[s.current])
+			})
 		}
 	})
 }
 
-// tabStrip is the tabs of the terminals, which scroll when they are many.
+// tabStrip is the tabs of the terminals, which wrap onto more lines when
+// they are many.
 func (m *Model) tabStrip(c *ui.Context, s *siteState) {
 	t := c.Theme()
-	ui.ScrollHorizontal(c).Grow(1).MinWidth(0).Scrollbars(false).Children(func() {
-		ui.Row(c).Height(40).Padding(0, 6).Gap(4).AlignItems(ui.Center).Children(func() {
-			closed := -1
-			for i, sess := range s.sessions {
-				tab := ui.ButtonBase(c).Key(sess.id).Height(28).Padding(0, 4, 0, 10).Gap(7).Radius(8).AlignItems(ui.Center).MaxWidth(240).Label(sess.title)
-				if tip := agentTip(sess.agent); tip != "" {
-					tab.Tooltip(tip)
-				}
-				if i == s.current {
-					tab.Background(selected(c)).Shadow(0, 1, 4, 0, ui.RGBA(0, 0, 0, 0.10))
-				} else if tab.Hovered() {
-					tab.Background(hover(c))
-				}
-				if tab.Clicked() {
-					s.current = i
-				}
-				// A middle click closes it: pressed on it, released on it.
-				if b, ok := tab.PressedButton(); ok && b == 2 {
-					m.middlePressed = sess.id
-				} else if m.middlePressed == sess.id {
-					m.middlePressed = ""
-					if tab.Hovered() {
-						closed = i
-					}
-				}
-				i := i
-				tab.ContextMenu(func(menu *ui.Menu) {
-					if menu.Item(locales.ViewReconnect()).Chosen() {
-						m.reconnect(s, i)
-					}
-					if menu.Item(locales.Close()).Chosen() {
-						closed = i
-					}
-				})
-				tab.Children(func() {
-					agentMark(c, sess)
-					text := ui.Text(c, sess.title).FontSize(12).SingleLine().MinWidth(0).Shrink(1)
-					if i != s.current {
-						text.TextColor(t.TextMuted)
-					}
-					x := ui.ButtonBase(c).Size(18, 18).Radius(5).Center().Label(locales.ViewCloseTab(sess.title))
-					if x.Hovered() {
-						x.Background(hover(c))
-					}
-					if x.Clicked() {
-						closed = i
-					}
-					x.Children(func() { ui.Icon(c, closeIcon).Size(10, 10).TextColor(t.TextMuted) })
-				})
+	ui.Row(c).Grow(1).MinWidth(0).Wrap().Padding(6).Gap(4).AlignItems(ui.Center).Children(func() {
+		closed := -1
+		for i, sess := range s.sessions {
+			tab := ui.ButtonBase(c).Key(sess.id).Height(28).Padding(0, 4, 0, 10).Gap(7).Radius(8).AlignItems(ui.Center).MaxWidth(240).Label(sess.title)
+			if tip := agentTip(sess.agent); tip != "" {
+				tab.Tooltip(tip)
 			}
-			if closed >= 0 {
-				m.closeSession(s, closed)
+			if i == s.current {
+				tab.Background(selected(c)).Shadow(0, 1, 4, 0, ui.RGBA(0, 0, 0, 0.10))
+			} else if tab.Hovered() {
+				tab.Background(hover(c))
 			}
-			tip := locales.ViewNewSession()
-			if key := m.shortcutLabel("newTerminal"); key != "" {
-				tip = locales.ViewNewSessionTooltip(key)
+			if tab.Clicked() {
+				s.current = i
 			}
-			if iconButton(c, plusIcon, locales.ViewNewSession()).Tooltip(tip).Clicked() {
-				m.newSession()
+			// A middle click closes it: pressed on it, released on it.
+			if b, ok := tab.PressedButton(); ok && b == 2 {
+				m.middlePressed = sess.id
+			} else if m.middlePressed == sess.id {
+				m.middlePressed = ""
+				if tab.Hovered() {
+					closed = i
+				}
 			}
-		})
+			i := i
+			tab.ContextMenu(func(menu *ui.Menu) {
+				if menu.Item(locales.ViewReconnect()).Chosen() {
+					m.reconnect(s, i)
+				}
+				if menu.Item(locales.Close()).Chosen() {
+					closed = i
+				}
+			})
+			tab.Children(func() {
+				agentMark(c, sess)
+				text := ui.Text(c, sess.title).FontSize(12).SingleLine().MinWidth(0).Shrink(1)
+				if i != s.current {
+					text.TextColor(t.TextMuted)
+				}
+				x := ui.ButtonBase(c).Size(18, 18).Radius(5).Center().Label(locales.ViewCloseTab(sess.title))
+				if x.Hovered() {
+					x.Background(hover(c))
+				}
+				if x.Clicked() {
+					closed = i
+				}
+				x.Children(func() { ui.Icon(c, closeIcon).Size(10, 10).TextColor(t.TextMuted) })
+			})
+		}
+		if closed >= 0 {
+			m.closeSession(s, closed)
+		}
+		tip := locales.ViewNewSession()
+		if key := m.shortcutLabel("newTerminal"); key != "" {
+			tip = locales.ViewNewSessionTooltip(key)
+		}
+		if iconButton(c, plusIcon, locales.ViewNewSession()).Tooltip(tip).Clicked() {
+			m.newSession()
+		}
 	})
 }
 

@@ -376,6 +376,7 @@
   "@shortcutFieldLabel": {
     "description": "The accessibility label of the field of an action's shortcut, as \"New Terminal shortcut\"."
   },
+  "shortcutCloseTab": "Close Terminal",
   "shortcutNewTerminal": "New Terminal",
   "shortcutNextSite": "Next Site",
   "shortcutNextTab": "Next Terminal",

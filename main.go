@@ -237,6 +237,37 @@ func main() {
 		})
 		mygo.App.OnSecondInstance(func([]string, string) { show() })
 
+		// appMenu is macOS's menu bar, made again in the language the app
+		// shows: MyGo's own but for Command+W, which closes the terminal
+		// shown in the window rather than the window, as its shortcut in
+		// the settings says. Editors' windows close as before.
+		appMenu := func() *mygo.Menu {
+			return mygo.NewMenu([]*mygo.MenuItem{
+				{Role: mygo.RoleAppMenu},
+				{Role: mygo.RoleFileMenu, Submenu: []*mygo.MenuItem{
+					{Label: locales.Close(), Accelerator: "Cmd+W", Click: func(_ *mygo.MenuItem, w *mygo.Window) {
+						switch w {
+						case nil:
+						case win:
+							win.Update(func() {
+								if !model.MenuKey(ui.Super, ui.KeyW) {
+									win.Close()
+								}
+							})
+						default:
+							w.Close()
+						}
+					}},
+				}},
+				{Role: mygo.RoleEditMenu},
+				{Role: mygo.RoleViewMenu},
+				{Role: mygo.RoleWindowMenu},
+			})
+		}
+		if runtime.GOOS == "darwin" {
+			mygo.App.SetMenu(appMenu())
+		}
+
 		// trayMenu is made again in the language the app shows.
 		trayMenu := func() *mygo.Menu {
 			return mygo.NewMenu([]*mygo.MenuItem{
@@ -265,6 +296,9 @@ func main() {
 		mygo.App.OnLocaleChanged(func(string) {
 			if tray != nil {
 				tray.SetMenu(trayMenu())
+			}
+			if runtime.GOOS == "darwin" {
+				mygo.App.SetMenu(appMenu())
 			}
 		})
 		model.Start()

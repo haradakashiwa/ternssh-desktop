@@ -129,3 +129,36 @@ func TestShortcuts(t *testing.T) {
 		t.Fatalf("defaults not back: %v", err)
 	}
 }
+
+func TestCloseTabShortcut(t *testing.T) {
+	m, st := testModel(t)
+	withSites(t, m, st)
+	tt := ui.NewTester(m.View, 1100, 700)
+	s := m.sites[1]
+	m.connectGroup(s, "g1")
+	tt.Frame()
+	n := len(s.sessions)
+	if n < 2 {
+		t.Fatalf("%d terminals", n)
+	}
+
+	// The menu bar's Command+W closes the terminal shown, and shows the
+	// one before it.
+	mods, key, _ := parseHotkey(m.shortcut("closeTab"))
+	if !m.MenuKey(mods, key) || len(s.sessions) != n-1 || s.current != n-2 || !s.sessions[s.current].refocus {
+		t.Fatalf("closed: %d terminals, %d shown", len(s.sessions), s.current)
+	}
+
+	// While a shortcut is recorded, the keys are its own.
+	m.startRecording("newTerminal")
+	if !m.MenuKey(ui.Super|ui.Shift, ui.KeyW) || m.shortcut("newTerminal") != "Shift+Super+W" || len(s.sessions) != n-1 {
+		t.Fatalf("recorded %q, %d terminals", m.shortcut("newTerminal"), len(s.sessions))
+	}
+
+	// Changed to another, the keys are not the window's: the window
+	// closes as before.
+	m.setShortcut("closeTab", "Alt+Super+W")
+	if m.MenuKey(ui.Super, ui.KeyW) {
+		t.Fatal("Command+W taken with no action")
+	}
+}

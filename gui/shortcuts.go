@@ -26,6 +26,7 @@ type shortcutAction struct {
 // elsewhere, as Windows Terminal's.
 var shortcutActions = []shortcutAction{
 	{id: "newTerminal", label: locales.ShortcutNewTerminal, mac: "Super+T", other: "Ctrl+Shift+T", do: (*Model).newSession},
+	{id: "closeTab", label: locales.ShortcutCloseTab, mac: "Super+W", other: "Ctrl+Shift+W", do: (*Model).closeCurrentSession},
 	{id: "nextTab", label: locales.ShortcutNextTab, mac: "Shift+Super+]", other: "Ctrl+Tab", do: func(m *Model) { m.cycleSession(1) }},
 	{id: "prevTab", label: locales.ShortcutPrevTab, mac: "Shift+Super+[", other: "Ctrl+Shift+Tab", do: func(m *Model) { m.cycleSession(-1) }},
 	{id: "nextSite", label: locales.ShortcutNextSite, mac: "Alt+Super+Right", other: "Ctrl+Shift+PageDown", do: func(m *Model) { m.cycleSite(1) }},
@@ -103,6 +104,28 @@ func (m *Model) TerminalKey(mods ui.Modifiers, key ui.Key) bool {
 		return true
 	}
 	return false
+}
+
+// MenuKey does what the keys of a menu item would in the window: the
+// action of the shortcut, or the key of the one being recorded. It
+// reports whether they were the window's; on macOS the menu bar takes
+// Command+W before the window sees it.
+func (m *Model) MenuKey(mods ui.Modifiers, key ui.Key) bool {
+	if m.settings.recording != "" {
+		return m.recordKey(ui.InputEvent{Kind: ui.InputKeyDown, Mods: mods, Key: key})
+	}
+	return m.TerminalKey(mods, key)
+}
+
+// closeCurrentSession closes the terminal shown in the tab of the window,
+// and shows the keyboard the one shown next.
+func (m *Model) closeCurrentSession() {
+	s := m.current()
+	if s == nil || s.current < 0 || s.current >= len(s.sessions) {
+		return
+	}
+	m.closeSession(s, s.current)
+	m.FocusTerminal()
 }
 
 // cycleSession shows the terminal d tabs after the one shown in the tab

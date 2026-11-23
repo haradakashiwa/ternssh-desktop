@@ -214,6 +214,7 @@
   "settingsVersion": "版本 {version}",
   "shortcutErrTaken": "{shortcut} 已用于「{name}」",
   "shortcutFieldLabel": "{name}快捷键",
+  "shortcutCloseTab": "关闭终端",
   "shortcutNewTerminal": "新建终端",
   "shortcutNextSite": "下一个站点",
   "shortcutNextTab": "下一个终端",

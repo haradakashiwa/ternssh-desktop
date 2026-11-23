@@ -2410,6 +2410,16 @@ func (msgs Messages) ShortcutFieldLabel(name string) string {
 	return Catalog.Format(msgs.locale, "shortcutFieldLabel", map[string]any{"name": name})
 }
 
+// ShortcutCloseTab says "Close Terminal"
+// in the language the app shows.
+func ShortcutCloseTab() string { return In(i18n.Locale()).ShortcutCloseTab() }
+
+// ShortcutCloseTab says "Close Terminal"
+// in the language of msgs.
+func (msgs Messages) ShortcutCloseTab() string {
+	return Catalog.Format(msgs.locale, "shortcutCloseTab", nil)
+}
+
 // ShortcutNewTerminal says "New Terminal"
 // in the language the app shows.
 func ShortcutNewTerminal() string { return In(i18n.Locale()).ShortcutNewTerminal() }

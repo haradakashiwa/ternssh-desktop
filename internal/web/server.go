@@ -11,9 +11,11 @@
 package web
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -93,6 +95,11 @@ type Server struct {
 	// signedIn are the credentials checked right, by their hash, so that
 	// each request does not run bcrypt again; Apply forgets them.
 	signedIn sync.Map
+	// sessions are the cookies of browsers that signed in, by token, with
+	// when each lapses unused; Apply forgets them. The cookie lets the
+	// WebSocket in, which some browsers (Safari) open without the page's
+	// username and password, asking for them a second time.
+	sessions sessions
 }
 
 // New returns a server of app, which Apply starts.
@@ -117,6 +124,7 @@ func (s *Server) Apply(opts *Options) error {
 	}
 	s.err = nil
 	s.signedIn.Clear()
+	s.sessions.clear()
 	if opts == nil {
 		return nil
 	}
@@ -299,29 +307,93 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, o Options) bool 
 			"ternssh：此地址密码错误次数过多，请在 " + wait.Round(time.Second).String() + " 后重试。\n"))
 		return false
 	}
+	if c, err := r.Cookie(sessionCookie); err == nil && s.sessions.valid(c.Value) {
+		return true
+	}
 	user, pass, ok := r.BasicAuth()
 	if ok {
 		key := sha256.Sum256([]byte(user + "\x00" + pass))
-		if _, known := s.signedIn.Load(key); known {
-			return true
+		_, known := s.signedIn.Load(key)
+		if !known {
+			userOK := subtle.ConstantTimeCompare([]byte(user), []byte(o.Username)) == 1
+			known = userOK && bcrypt.CompareHashAndPassword([]byte(o.PasswordHash), []byte(pass)) == nil
 		}
-		userOK := subtle.ConstantTimeCompare([]byte(user), []byte(o.Username)) == 1
-		passOK := bcrypt.CompareHashAndPassword([]byte(o.PasswordHash), []byte(pass)) == nil
-		if userOK && passOK {
+		if known {
 			s.fails.passed(host)
 			s.signedIn.Store(key, struct{}{})
+			http.SetCookie(w, &http.Cookie{
+				Name: sessionCookie, Value: s.sessions.add(), Path: "/",
+				HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode,
+			})
 			return true
 		}
 		if wait := s.fails.failed(host); wait > 0 {
 			log.Printf("web: %s locked out for %s after wrong passwords", host, wait)
 		}
 	}
-	w.Header().Set("WWW-Authenticate", `Basic realm="ternssh", charset="UTF-8"`)
+	// The WebSocket's 401 asks nothing: the page signs in again with
+	// the username and password the browser keeps, then opens it.
+	if r.URL.Path != "/ws" {
+		w.Header().Set("WWW-Authenticate", `Basic realm="ternssh", charset="UTF-8"`)
+	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusUnauthorized)
 	w.Write([]byte("ternssh: sign in with the username and password set in the app's settings.\n" +
 		"ternssh：请使用应用设置中设定的用户名和密码登录。\n"))
 	return false
+}
+
+// sessionCookie names the cookie of a browser that signed in.
+const sessionCookie = "ternssh_session"
+
+// sessionIdle is how long a session lapses unused, after which the
+// browser signs in again with the username and password it keeps.
+const sessionIdle = 12 * time.Hour
+
+// sessions are the tokens of browsers that signed in, with when each
+// lapses.
+type sessions struct {
+	mu sync.Mutex
+	m  map[string]time.Time
+}
+
+// add starts a session, and returns its token.
+func (ss *sessions) add() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	token := base64.RawURLEncoding.EncodeToString(b)
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	now := time.Now()
+	if ss.m == nil {
+		ss.m = map[string]time.Time{}
+	}
+	for t, until := range ss.m {
+		if now.After(until) {
+			delete(ss.m, t)
+		}
+	}
+	ss.m[token] = now.Add(sessionIdle)
+	return token
+}
+
+// valid reports whether token is a session's, which it keeps another
+// sessionIdle.
+func (ss *sessions) valid(token string) bool {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	until, ok := ss.m[token]
+	if !ok || time.Now().After(until) {
+		return false
+	}
+	ss.m[token] = time.Now().Add(sessionIdle)
+	return true
+}
+
+func (ss *sessions) clear() {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	ss.m = nil
 }
 
 // failures counts the wrong passwords of each address: after maxFailures

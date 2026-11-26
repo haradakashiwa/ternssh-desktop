@@ -268,3 +268,53 @@ func TestPublicNeedsAPassword(t *testing.T) {
 		}
 	}
 }
+
+// TestSignInOnce: the page's sign-in lets the WebSocket in by its cookie,
+// for browsers that open it without the username and password, and the
+// WebSocket's 401 does not ask for them again.
+func TestSignInOnce(t *testing.T) {
+	s, _, base := start(t, LAN)
+	res := get(t, base+"/", "me", "correct horse")
+	var cookie *http.Cookie
+	for _, c := range res.Cookies() {
+		if c.Name == sessionCookie {
+			cookie = c
+		}
+	}
+	if cookie == nil || !cookie.HttpOnly || cookie.SameSite != http.SameSiteStrictMode {
+		t.Fatalf("no session cookie: %v", res.Cookies())
+	}
+	withCookie := func(path string) *http.Response {
+		req, _ := http.NewRequest("GET", base+path, nil)
+		req.AddCookie(cookie)
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res
+	}
+	if res := withCookie("/assets/app.js"); res.StatusCode != http.StatusOK {
+		t.Fatalf("with the cookie: %d", res.StatusCode)
+	}
+	cfg, _ := websocket.NewConfig(strings.Replace(base, "http", "ws", 1)+"/ws", base)
+	cfg.Header = http.Header{"Cookie": {cookie.String()}}
+	ws, err := websocket.DialConfig(cfg)
+	if err != nil {
+		t.Fatalf("the WebSocket with the cookie: %v", err)
+	}
+	ws.Close()
+	if res := get(t, base+"/ws", "", ""); res.StatusCode != http.StatusUnauthorized || res.Header.Get("WWW-Authenticate") != "" {
+		t.Fatalf("the WebSocket without signing in: %d %q", res.StatusCode, res.Header.Get("WWW-Authenticate"))
+	}
+	// A forged cookie does not, nor one from before the settings changed.
+	cookie.Value = "forged"
+	if res := withCookie("/"); res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("a forged cookie: %d", res.StatusCode)
+	}
+	cookie.Value = s.sessions.add()
+	s.sessions.clear()
+	if res := withCookie("/"); res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("a forgotten session: %d", res.StatusCode)
+	}
+}

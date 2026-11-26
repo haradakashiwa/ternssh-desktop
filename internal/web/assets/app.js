@@ -11,6 +11,7 @@ const T = {
     close: "Close", reconnect: "Reconnect", offline: "Disconnected from the app, reconnecting…",
     online: "Connected to the app", shownInApp: "shown in the app", notReady: "The terminal is not connected",
     sent: "Sent: ",
+    keysCtrl: "Ctrl: applies to the next key. Tap twice to keep it on.", keysAlt: "Alt: applies to the next key. Tap twice to keep it on.",
   },
   zh: {
     search: "搜索", refresh: "刷新", loading: "正在加载…", noItems: "这里还没有内容",
@@ -18,6 +19,7 @@ const T = {
     close: "关闭", reconnect: "重新连接", offline: "与应用的连接已断开，正在重连…",
     online: "已连接到应用", shownInApp: "应用中正在显示", notReady: "终端未连接",
     sent: "已发送：",
+    keysCtrl: "Ctrl：作用于下一个按键，连按两次保持按下", keysAlt: "Alt：作用于下一个按键，连按两次保持按下",
   },
 };
 let lang = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
@@ -106,7 +108,7 @@ term.open($("term"));
 const reply = /^(\x1b\[[?>]?[\d;]*(\$y|[cRnt])|\x1b\[\?[\d;]*u|\x1b\[[IO]|\x1b\][\d;]+;rgb:[^\x07\x1b]*(\x07|\x1b\\)|\x1bP[\s\S]*\x1b\\)$/;
 term.onData((d) => {
   if (!watching || reply.test(d)) return;
-  send({ type: "input", id: watching, text: d });
+  send({ type: "input", id: watching, text: modify(d) });
 });
 term.onBinary((d) => {
   if (!watching) return;
@@ -127,6 +129,174 @@ function fit() {
   if (term.options.fontSize !== fs) term.options.fontSize = fs;
 }
 addEventListener("resize", fit);
+
+// The key bar: the keys a phone's keyboard lacks. Ctrl and Alt apply to
+// the next key, from the bar or the keyboard; tapped twice, they stay on
+// until tapped again.
+const mods = { ctrl: 0, alt: 0 }; // 0 off, 1 the next key, 2 locked
+const KEYS = [
+  { label: "Esc", seq: "\x1b" },
+  { label: "Tab", seq: "\t" },
+  { label: "Ctrl", mod: "ctrl" },
+  { label: "Alt", mod: "alt" },
+  { sep: true },
+  { label: "↑", csi: "A" }, { label: "↓", csi: "B" }, { label: "←", csi: "D" }, { label: "→", csi: "C" },
+  { label: "Home", csi: "H" }, { label: "End", csi: "F" },
+  { label: "PgUp", tilde: 5 }, { label: "PgDn", tilde: 6 },
+  { sep: true },
+  { label: "^C", seq: "\x03" }, { label: "^D", seq: "\x04" }, { label: "^Z", seq: "\x1a" }, { label: "^L", seq: "\x0c" }, { label: "^R", seq: "\x12" },
+  { sep: true },
+  ...["~", "/", "|", "-", "_", "*", "&", "$", "'", '"', "`", "\\", "[", "]", "{", "}", "<", ">"].map((c) => ({ label: c, seq: c })),
+];
+
+// modify applies Ctrl and Alt to typed text, as a terminal does to a key:
+// Ctrl turns a letter or one of @[\]^_ into its control character.
+function modify(d) {
+  if (!mods.ctrl && !mods.alt) return d;
+  if (mods.ctrl && d.length === 1) {
+    const c = d.toUpperCase().charCodeAt(0);
+    if (c >= 64 && c <= 95) d = String.fromCharCode(c & 0x1f);
+    else if (d === " " || d === "2") d = "\x00";
+    else if (d === "?" || d === "8") d = "\x7f";
+  }
+  if (mods.alt) d = "\x1b" + d;
+  used();
+  return d;
+}
+
+// keySeq is what a key of the bar sends, with Ctrl and Alt, as xterm's
+// keys are: ESC [ 1 ; m A, where m is 1 + 2 for Alt + 4 for Ctrl.
+function keySeq(k) {
+  const m = 1 + (mods.alt ? 2 : 0) + (mods.ctrl ? 4 : 0);
+  let seq;
+  if (k.csi) {
+    if (m > 1) seq = `\x1b[1;${m}${k.csi}`;
+    else seq = (term.modes.applicationCursorKeysMode ? "\x1bO" : "\x1b[") + k.csi;
+  } else if (k.tilde) {
+    seq = m > 1 ? `\x1b[${k.tilde};${m}~` : `\x1b[${k.tilde}~`;
+  } else {
+    return modify(k.seq);
+  }
+  used();
+  return seq;
+}
+
+// used turns off a modifier that was for one key.
+function used() {
+  for (const k in mods) if (mods[k] === 1) mods[k] = 0;
+  paintKeys();
+}
+
+function paintKeys() {
+  for (const b of $("keys").querySelectorAll("[data-mod]")) {
+    const v = mods[b.dataset.mod];
+    b.classList.toggle("on", v > 0);
+    b.classList.toggle("lock", v === 2);
+    b.title = t(b.dataset.mod === "ctrl" ? "keysCtrl" : "keysAlt");
+  }
+}
+
+{
+  const bar = $("keys");
+  let repeat = 0;
+  for (const k of KEYS) {
+    if (k.sep) {
+      bar.append(el("span", "sep"));
+      continue;
+    }
+    const b = el("button", "key", k.label);
+    b.tabIndex = -1;
+    if (k.mod) b.dataset.mod = k.mod;
+    const press = () => {
+      if (k.mod) {
+        mods[k.mod] = (mods[k.mod] + 1) % 3;
+        return paintKeys();
+      }
+      if (watching) send({ type: "input", id: watching, text: keySeq(k) });
+    };
+    // Pressing keeps the focus in the terminal, and the phone's keyboard
+    // up; held, the arrows and the like repeat.
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      press();
+      if (!k.csi && !k.tilde) return;
+      clearTimeout(repeat);
+      const again = () => { press(); repeat = setTimeout(again, 60); };
+      repeat = setTimeout(again, 450);
+    });
+    for (const ev of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(ev, () => clearTimeout(repeat));
+    bar.append(b);
+  }
+}
+
+// Touch scrolling, which xterm.js 6 does not do: a vertical drag on the
+// terminal scrolls its scrollback, or, in a full-screen program, sends it
+// what the wheel would: mouse wheel reports when it asked for the mouse,
+// else arrow keys. A sideways drag still scrolls a page too narrow for the
+// terminal. A flick keeps going, slowing down.
+{
+  const screen = $("screen");
+  let last = null, axis = null, speed = 0, fling = 0, rest = 0;
+  // scroll scrolls dy pixels, up for negative, where the finger is (x, y).
+  const scroll = (x, y, dy) => {
+    const box = document.querySelector("#term .xterm-screen").getBoundingClientRect();
+    const lineH = box.height / term.rows || 16;
+    rest += dy;
+    const n = Math.trunc(rest / lineH);
+    if (!n) return;
+    rest -= n * lineH;
+    if (term.buffer.active.type === "normal") return term.scrollLines(n);
+    if (!watching) return;
+    let seq;
+    if (term.modes.mouseTrackingMode !== "none") {
+      const col = Math.max(1, Math.min(term.cols, Math.floor((x - box.left) / (box.width / term.cols)) + 1));
+      const row = Math.max(1, Math.min(term.rows, Math.floor((y - box.top) / lineH) + 1));
+      seq = `\x1b[<${n < 0 ? 64 : 65};${col};${row}M`;
+    } else {
+      seq = (term.modes.applicationCursorKeysMode ? "\x1bO" : "\x1b[") + (n < 0 ? "A" : "B");
+    }
+    send({ type: "input", id: watching, text: seq.repeat(Math.abs(n)) });
+  };
+  screen.addEventListener("touchstart", (e) => {
+    cancelAnimationFrame(fling);
+    if (e.touches.length !== 1) return (last = null);
+    const p = e.touches[0];
+    last = { x: p.clientX, y: p.clientY, t: e.timeStamp, x0: p.clientX, y0: p.clientY };
+    axis = null;
+    speed = rest = 0;
+  }, { passive: true });
+  screen.addEventListener("touchmove", (e) => {
+    if (!last || e.touches.length !== 1) return;
+    const p = e.touches[0];
+    if (!axis) {
+      const dx = Math.abs(p.clientX - last.x0), dy = Math.abs(p.clientY - last.y0);
+      if (dx < 6 && dy < 6) return;
+      axis = dy >= dx ? "y" : "x";
+    }
+    if (axis !== "y") return;
+    e.preventDefault();
+    const dy = last.y - p.clientY, dt = Math.max(1, e.timeStamp - last.t);
+    speed = 0.8 * (dy / dt) + 0.2 * speed;
+    scroll(p.clientX, p.clientY, dy);
+    last = { ...last, x: p.clientX, y: p.clientY, t: e.timeStamp };
+  }, { passive: false });
+  screen.addEventListener("touchend", () => {
+    // Full-screen programs get no flick: it would type keys on and on.
+    if (!last || axis !== "y" || Math.abs(speed) < 0.3 || term.buffer.active.type !== "normal") return (last = null);
+    const { x, y } = last;
+    let v = speed * 16, prev = performance.now();
+    last = null;
+    const step = (now) => {
+      const frames = (now - prev) / 16;
+      prev = now;
+      v *= Math.pow(0.95, frames);
+      if (Math.abs(v) < 0.5) return;
+      scroll(x, y, v * frames);
+      fling = requestAnimationFrame(step);
+    };
+    fling = requestAnimationFrame(step);
+  });
+}
 
 function b64(s) {
   const bin = atob(s || "");
@@ -176,7 +346,10 @@ function connect() {
   ws.onclose = () => {
     $("link").classList.remove("on");
     $("link").title = t("offline");
-    setTimeout(connect, 1500);
+    // Sign in again first: the session cookie the WebSocket goes in with
+    // lapses, or the app restarted. The browser sends the username and
+    // password it keeps, and asks for them only when they are wrong.
+    setTimeout(() => fetch("/", { method: "HEAD", cache: "no-store" }).catch(() => {}).finally(connect), 1500);
   };
 }
 
@@ -222,6 +395,8 @@ function render() {
   renderStatus(sess);
   $("empty").classList.toggle("hidden", !!sess);
   $("screen").classList.toggle("hidden", !sess);
+  $("keys").classList.toggle("hidden", !sess);
+  paintKeys();
   if (!sess) {
     $("empty").replaceChildren(icon("terminal", 40, "big"), el("b", "", t("noTerminals")), el("span", "", t("noTerminalsHint")));
   }

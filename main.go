@@ -23,6 +23,7 @@ import (
 	"ternssh-desktop/gui"
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
+	"ternssh-desktop/internal/web"
 	"ternssh-desktop/locales"
 )
 
@@ -101,12 +102,13 @@ func main() {
 					OnTitle:     ev.OnTitle,
 					OnNotify:    ev.OnNotify,
 					OnBell:      ev.OnBell,
+					OnClear:     onClear(ev),
 				})
 			},
-			NewShell: func(dir string, ev gui.TermEvents) (*terminal.Terminal, error) {
+			NewShell: func(conn gui.Conn, zsh bool, ev gui.TermEvents) (*terminal.Terminal, error) {
 				return terminal.New(terminal.Options{
-					Dir:              dir,
-					ShellIntegration: true,
+					Conn:             conn,
+					ShellIntegration: zsh,
 					Transparent:      true,
 					Padding:          terminal.Padding{X: 10, Y: 8},
 					OnKey:            model.TerminalKey,
@@ -114,6 +116,7 @@ func main() {
 					OnNotify:         ev.OnNotify,
 					OnBell:           ev.OnBell,
 					OnExit:           ev.OnExit,
+					OnClear:          onClear(ev),
 				})
 			},
 			Notify: func(title, body string, onClick func()) {
@@ -173,6 +176,7 @@ func main() {
 				return paths[0], err
 			},
 			SetLanguage: mygo.App.SetLocale,
+			OpenURL:     mygo.Shell.OpenExternal,
 			AccessLogin: accessLogin,
 			Version:     mygo.App.Version(),
 			Updates: &gui.Updates{
@@ -198,6 +202,9 @@ func main() {
 				return nil
 			},
 		})
+		// The web app, which shows this window in browsers, starts with
+		// the model as the settings say.
+		model.SetWeb(web.New(model))
 		win = mygo.NewWindow(mygo.WindowOptions{
 			Title:          "ternssh",
 			Width:          1200,
@@ -305,5 +312,15 @@ func main() {
 	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+// onClear tells ev the user clears the terminal, which it then does.
+func onClear(ev gui.TermEvents) func(terminal.Clear) bool {
+	return func(terminal.Clear) bool {
+		if ev.OnClear != nil {
+			ev.OnClear()
+		}
+		return false
 	}
 }

@@ -50,6 +50,7 @@ func (m *Model) View(c *ui.Context) {
 	m.confirmDialog(c)
 	m.settingsDialog(c)
 	m.toastView(c)
+	m.publish()
 }
 
 // titleBar holds the tabs of the sites, after the window controls.

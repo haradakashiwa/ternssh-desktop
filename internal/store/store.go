@@ -107,6 +107,9 @@ type Store struct {
 
 	mu sync.Mutex
 	d  data
+	// webPassword is the web app's password hash without a credential
+	// store, as in tests.
+	webPassword []byte
 }
 
 // Open reads the store at path, empty when there is none yet.

@@ -25,7 +25,8 @@ func request() (context.Context, context.CancelFunc) {
 func dialog(c *ui.Context, open *bool, width float32, fn func()) {
 	ui.DialogBase(c, open, func(backdrop, box ui.Element) {
 		backdrop.Background(ui.RGBA(0, 0, 0, 0.32))
-		box.Width(width).Padding(22).Gap(14).Radius(18).
+		// A dialog taller than the window scrolls what it scrolls.
+		box.Width(width).MaxHeightPercent(92).Padding(22).Gap(14).Radius(18).
 			Background(panel(c)).Border(1, hairline(c)).
 			Shadow(0, 12, 36, 0, ui.RGBA(0, 0, 0, 0.25))
 		fn()

@@ -31,6 +31,7 @@ The builds are not signed with a developer certificate: on macOS, right-click th
 - **Files**: browse files over SFTP and on this machine, upload and download, and double-click to edit in an editor with syntax highlighting.
 - **Snippets**: run common commands in the terminal in one click; a site's snippets are shared with its web app.
 - **Server status**: live CPU, memory, disk, network and process monitoring (Linux).
+- **Web**: turned on in the settings, the app serves itself to a browser while it runs: the same tabs, servers, snippets and terminals, in step with the window both ways. The settings choose the port and who gets in: this machine only, the local network, or the public network; beyond this machine, browsers sign in with a username and password (HTTP basic authentication), and an address that keeps getting it wrong is locked out for longer each time. Put it behind HTTPS when it faces the internet.
 - **Tray and global hotkey**: closing the window keeps the app in the tray, and a hotkey brings it back.
 - **Languages**: Simplified Chinese and English, following the system by default, switchable in the settings.
 - **Updates**: checks this repository's releases once a day, or from the settings and the tray, and installs a new version in the app, then relaunches.

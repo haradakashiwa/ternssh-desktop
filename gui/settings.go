@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"errors"
 	"runtime"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"ternssh-desktop/internal/store"
+	"ternssh-desktop/internal/web"
 	"ternssh-desktop/locales"
 )
 
@@ -21,6 +23,10 @@ type settingsForm struct {
 	closeAction int // 0 keeps the app in the tray, 1 quits
 	language    int // of languages
 	target      int // of commandTargets
+	webPort     string
+	webUser     string
+	webPass     string
+	webErr      string
 }
 
 // The tabs of the settings.
@@ -52,6 +58,8 @@ func languageLabels() []string {
 func (m *Model) OpenSettings() {
 	m.settings = settingsForm{}
 	st := m.store.Settings()
+	m.settings.webPort = strconv.Itoa(webPort(st.Web))
+	m.settings.webUser = st.Web.Username
 	if st.QuitOnClose {
 		m.settings.closeAction = 1
 	}
@@ -91,12 +99,14 @@ func (m *Model) settingsDialog(c *ui.Context) {
 			m.stopRecording()
 			f.err = ""
 		}
-		switch f.tab {
-		case settingsGeneral:
-			m.generalSettings(c)
-		case settingsShortcuts:
-			m.shortcutSettings(c)
-		}
+		ui.Scroll(c).Grow(1).Shrink(1).MinHeight(0).Children(func() {
+			switch f.tab {
+			case settingsGeneral:
+				m.generalSettings(c)
+			case settingsShortcuts:
+				m.shortcutSettings(c)
+			}
+		})
 		ui.Row(c).Justify(ui.End).Children(func() {
 			if ui.PrimaryButton(c, locales.Done()).Clicked() {
 				m.settingsOpen = false
@@ -132,6 +142,7 @@ func (m *Model) generalSettings(c *ui.Context) {
 				ui.Text(c, locales.SettingsCommandTargetHint()).FontSize(11).TextColor(c.Theme().TextMuted)
 			})
 		})
+		m.webField(c)
 		m.updateField(c)
 	})
 	errorText(c, f.err)
@@ -446,4 +457,152 @@ var namedKeys = map[ui.Key]string{
 	ui.KeyMinus: "-", ui.KeyEqual: "=", ui.KeyComma: ",", ui.KeyPeriod: ".",
 	ui.KeySlash: "/", ui.KeySemicolon: ";", ui.KeyQuote: "'",
 	ui.KeyBracketLeft: "[", ui.KeyBracketRight: "]", ui.KeyBackslash: `\`, ui.KeyBackquote: "`",
+}
+
+func webPort(w store.Web) int {
+	if w.Port == 0 {
+		return store.DefaultWebPort
+	}
+	return w.Port
+}
+
+// webAccesses are who the web app may let in, as the drop-down lists them.
+var webAccesses = []string{store.WebLocal, store.WebLAN, store.WebPublic}
+
+func webAccessLabels() []string {
+	return []string{locales.SettingsWebAccessLocal(), locales.SettingsWebAccessLAN(), locales.SettingsWebAccessPublic()}
+}
+
+// minWebPassword is the shortest password public access takes.
+const minWebPassword = 8
+
+// webField turns the web app on and off, sets its port and who it lets in,
+// with the username and password of public access, and shows its
+// addresses.
+func (m *Model) webField(c *ui.Context) {
+	if m.web == nil {
+		return
+	}
+	t := c.Theme()
+	f := &m.settings
+	st := m.store.Settings()
+	save := func() {
+		f.webErr = ""
+		if err := m.store.SetSettings(st); err != nil {
+			f.webErr = locales.SettingsErrSave(err.Error())
+			return
+		}
+		m.applyWeb()
+	}
+	hint := func(text string) { ui.Text(c, text).FontSize(11).TextColor(t.TextMuted) }
+	ui.Field(c, locales.SettingsWeb(), func() {
+		ui.Column(c).Gap(8).Children(func() {
+			on := st.Web.Enabled
+			if ui.Checkbox(c, &on, locales.SettingsWebEnable()).Changed() {
+				st.Web.Enabled = on
+				save()
+			}
+			hint(locales.SettingsWebHint())
+		})
+	})
+	ui.Field(c, locales.SettingsWebPort(), func() {
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+			ui.TextInput(c, &f.webPort).Width(100).Label(locales.SettingsWebPort()).Placeholder(strconv.Itoa(store.DefaultWebPort))
+			if strings.TrimSpace(f.webPort) != strconv.Itoa(webPort(st.Web)) && ui.Button(c, locales.SettingsWebApply()).Clicked() {
+				p, err := strconv.Atoi(strings.TrimSpace(f.webPort))
+				if err != nil || p < 1024 || p > 65535 {
+					f.webErr = locales.SettingsWebBadPort()
+					return
+				}
+				st.Web.Port = p
+				save()
+			}
+		})
+	})
+	ui.Field(c, locales.SettingsWebAccess(), func() {
+		ui.Column(c).Gap(8).Children(func() {
+			access := 0
+			for i, a := range webAccesses {
+				if a == st.Web.Access() {
+					access = i
+				}
+			}
+			before := access
+			choose(c, &access, locales.SettingsWebAccess(), webAccessLabels())
+			if access != before {
+				st.Web.SetAccess(webAccesses[access])
+				save()
+			}
+			switch st.Web.Access() {
+			case store.WebLAN:
+				hint(locales.SettingsWebLANHint())
+			case store.WebPublic:
+				hint(locales.SettingsWebPublicHint())
+			}
+		})
+	})
+	if st.Web.Access() != store.WebLocal {
+		hasPassword := len(m.store.WebPasswordHash()) > 0
+		ui.Field(c, locales.SettingsWebAccount(), func() {
+			ui.Column(c).Gap(8).Children(func() {
+				ui.TextInput(c, &f.webUser).Label(locales.DialogFieldUsername()).Placeholder(locales.DialogFieldUsername())
+				placeholder := locales.SettingsWebPasswordNew(strconv.Itoa(minWebPassword))
+				if hasPassword {
+					placeholder = locales.SettingsWebPasswordKeep()
+				}
+				ui.TextInput(c, &f.webPass).Password().Label(locales.DialogFieldPassword()).Placeholder(placeholder)
+				changed := strings.TrimSpace(f.webUser) != st.Web.Username || f.webPass != ""
+				if changed && ui.PrimaryButton(c, locales.SettingsWebSaveAccount()).Clicked() {
+					user := strings.TrimSpace(f.webUser)
+					switch {
+					case user == "":
+						f.webErr = locales.SettingsWebNeedUsername()
+						return
+					case f.webPass == "" && !hasPassword, f.webPass != "" && len([]rune(f.webPass)) < minWebPassword:
+						f.webErr = locales.SettingsWebShortPassword(strconv.Itoa(minWebPassword))
+						return
+					}
+					if f.webPass != "" {
+						if err := m.store.SetWebPassword(f.webPass); err != nil {
+							f.webErr = locales.SettingsErrSave(err.Error())
+							return
+						}
+					}
+					st.Web.Username, f.webUser, f.webPass = user, user, ""
+					save()
+					m.notify(locales.SettingsWebAccountSaved())
+				}
+			})
+		})
+	}
+	if !st.Web.Enabled {
+		errorText(c, f.webErr)
+		return
+	}
+	ui.Field(c, locales.SettingsWebLinks(), func() {
+		ui.Column(c).Gap(6).Children(func() {
+			switch err := m.web.Err(); {
+			case errors.Is(err, web.ErrNoPassword):
+				errorText(c, locales.SettingsWebNeedAccount())
+			case err != nil:
+				errorText(c, locales.WebListenFailed(err.Error()))
+			}
+			for _, u := range m.web.URLs() {
+				ui.Row(c).Key("web:" + u).Gap(6).AlignItems(ui.Center).Children(func() {
+					ui.Text(c, u).FontSize(12).Grow(1).MinWidth(0).MaxLines(1).Ellipsis("…")
+					if m.backend.OpenURL != nil && ui.Button(c, locales.SettingsWebOpen()).Clicked() {
+						m.backend.OpenURL(u)
+					}
+					if ui.Button(c, locales.SettingsWebCopy()).Clicked() {
+						c.WriteClipboard(u)
+						m.notify(locales.SettingsWebCopied())
+					}
+				})
+			}
+			if st.Web.Public && m.web.Err() == nil {
+				hint(locales.SettingsWebPublicLink(strconv.Itoa(webPort(st.Web))))
+			}
+			errorText(c, f.webErr)
+		})
+	})
 }

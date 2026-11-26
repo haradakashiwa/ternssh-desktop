@@ -371,12 +371,49 @@
   "@settingsVersion": {
     "description": "The version of the app that runs."
   },
+  "settingsWeb": "Web",
+  "@settingsWeb": {
+    "description": "Label of the settings row of the web app the app serves."
+  },
+  "settingsWebAccess": "Access",
+  "@settingsWebAccess": {
+    "description": "Label of the drop-down of who the web app lets in."
+  },
+  "settingsWebAccessLAN": "Local network",
+  "settingsWebAccessLocal": "This Mac or PC only",
+  "settingsWebAccessPublic": "Public network",
+  "settingsWebAccount": "Account",
+  "@settingsWebAccount": {
+    "description": "Label of the username and password of the web app's public access."
+  },
+  "settingsWebAccountSaved": "Account saved",
+  "settingsWebApply": "Apply",
+  "settingsWebBadPort": "The port is a number from 1024 to 65535.",
+  "settingsWebCopied": "Link copied",
+  "settingsWebCopy": "Copy Link",
+  "settingsWebEnable": "Use ternssh in a browser",
+  "settingsWebHint": "The app serves itself to browsers while it runs: the same tabs, servers, quick commands and terminals, in step with the window both ways.",
+  "settingsWebLANHint": "This machine and private addresses (the local network, VPNs) may connect. Browsers sign in with the username and password below.",
+  "settingsWebLinks": "Links",
+  "settingsWebNeedAccount": "Access beyond this machine starts once a username and password are saved.",
+  "settingsWebNeedUsername": "Enter a username.",
+  "settingsWebOpen": "Open",
+  "@settingsWebOpen": {
+    "description": "Button that opens the web app's address in the browser."
+  },
+  "settingsWebPasswordKeep": "Set: leave empty to keep it",
+  "settingsWebPasswordNew": "Password, at least {n} characters",
+  "settingsWebPort": "Port",
+  "settingsWebPublicHint": "Any address may connect, as through port forwarding. Browsers sign in with the username and password below; an address that gets them wrong 5 times waits a minute, then longer each time. Pages travel as plain HTTP: put the app behind HTTPS, as a Cloudflare Tunnel or a reverse proxy, when it faces the internet.",
+  "settingsWebPublicLink": "From the internet: http://<public IP or domain>:{port}/",
+  "settingsWebSaveAccount": "Save Account",
+  "settingsWebShortPassword": "The password needs at least {n} characters.",
+  "shortcutCloseTab": "Close Terminal",
   "shortcutErrTaken": "{shortcut} is already the shortcut of {name}",
   "shortcutFieldLabel": "{name} shortcut",
   "@shortcutFieldLabel": {
     "description": "The accessibility label of the field of an action's shortcut, as \"New Terminal shortcut\"."
   },
-  "shortcutCloseTab": "Close Terminal",
   "shortcutNewTerminal": "New Terminal",
   "shortcutNextSite": "Next Site",
   "shortcutNextTab": "Next Terminal",
@@ -632,5 +669,8 @@
     "description": "The status bar: the SSH connection is made from this machine."
   },
   "viewViaLocal": "Local terminal",
-  "viewViaSite": "Direct from this machine · credentials from {host}"
+  "viewViaSite": "Direct from this machine · credentials from {host}",
+  "webListenFailed": "The web app could not start: {error}",
+  "webNoTerminal": "This terminal was closed",
+  "webOpenFailed": "What the browser opened is no longer there"
 }

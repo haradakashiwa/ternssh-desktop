@@ -17,6 +17,8 @@ type TermEvents struct {
 	OnNotify func(title, body string)
 	OnBell   func()
 	OnExit   func(code int)
+	// OnClear is told the user clears the terminal, before it does.
+	OnClear func()
 }
 
 // agentState is what a coding agent in a terminal, as Claude Code, is
@@ -91,6 +93,11 @@ func (m *Model) termEvents(s *siteState, sess *session) TermEvents {
 		OnTitle:  func(title string) { m.update(func() { m.agentTitle(s, sess, title) }) },
 		OnNotify: func(title, body string) { m.update(func() { m.agentNotified(s, sess, title, body) }) },
 		OnBell:   func() { m.update(func() { m.agentBell(s, sess) }) },
+		OnClear: func() {
+			if sess.tap != nil {
+				sess.tap.resyncSoon()
+			}
+		},
 	}
 }
 

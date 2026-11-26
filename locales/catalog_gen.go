@@ -2382,6 +2382,282 @@ func (msgs Messages) SettingsVersion(version string) string {
 	return Catalog.Format(msgs.locale, "settingsVersion", map[string]any{"version": version})
 }
 
+// SettingsWeb says "Web"
+// in the language the app shows.
+//
+// Label of the settings row of the web app the app serves.
+func SettingsWeb() string { return In(i18n.Locale()).SettingsWeb() }
+
+// SettingsWeb says "Web"
+// in the language of msgs.
+//
+// Label of the settings row of the web app the app serves.
+func (msgs Messages) SettingsWeb() string {
+	return Catalog.Format(msgs.locale, "settingsWeb", nil)
+}
+
+// SettingsWebAccess says "Access"
+// in the language the app shows.
+//
+// Label of the drop-down of who the web app lets in.
+func SettingsWebAccess() string { return In(i18n.Locale()).SettingsWebAccess() }
+
+// SettingsWebAccess says "Access"
+// in the language of msgs.
+//
+// Label of the drop-down of who the web app lets in.
+func (msgs Messages) SettingsWebAccess() string {
+	return Catalog.Format(msgs.locale, "settingsWebAccess", nil)
+}
+
+// SettingsWebAccessLAN says "Local network"
+// in the language the app shows.
+func SettingsWebAccessLAN() string { return In(i18n.Locale()).SettingsWebAccessLAN() }
+
+// SettingsWebAccessLAN says "Local network"
+// in the language of msgs.
+func (msgs Messages) SettingsWebAccessLAN() string {
+	return Catalog.Format(msgs.locale, "settingsWebAccessLAN", nil)
+}
+
+// SettingsWebAccessLocal says "This Mac or PC only"
+// in the language the app shows.
+func SettingsWebAccessLocal() string { return In(i18n.Locale()).SettingsWebAccessLocal() }
+
+// SettingsWebAccessLocal says "This Mac or PC only"
+// in the language of msgs.
+func (msgs Messages) SettingsWebAccessLocal() string {
+	return Catalog.Format(msgs.locale, "settingsWebAccessLocal", nil)
+}
+
+// SettingsWebAccessPublic says "Public network"
+// in the language the app shows.
+func SettingsWebAccessPublic() string { return In(i18n.Locale()).SettingsWebAccessPublic() }
+
+// SettingsWebAccessPublic says "Public network"
+// in the language of msgs.
+func (msgs Messages) SettingsWebAccessPublic() string {
+	return Catalog.Format(msgs.locale, "settingsWebAccessPublic", nil)
+}
+
+// SettingsWebAccount says "Account"
+// in the language the app shows.
+//
+// Label of the username and password of the web app's public access.
+func SettingsWebAccount() string { return In(i18n.Locale()).SettingsWebAccount() }
+
+// SettingsWebAccount says "Account"
+// in the language of msgs.
+//
+// Label of the username and password of the web app's public access.
+func (msgs Messages) SettingsWebAccount() string {
+	return Catalog.Format(msgs.locale, "settingsWebAccount", nil)
+}
+
+// SettingsWebAccountSaved says "Account saved"
+// in the language the app shows.
+func SettingsWebAccountSaved() string { return In(i18n.Locale()).SettingsWebAccountSaved() }
+
+// SettingsWebAccountSaved says "Account saved"
+// in the language of msgs.
+func (msgs Messages) SettingsWebAccountSaved() string {
+	return Catalog.Format(msgs.locale, "settingsWebAccountSaved", nil)
+}
+
+// SettingsWebApply says "Apply"
+// in the language the app shows.
+func SettingsWebApply() string { return In(i18n.Locale()).SettingsWebApply() }
+
+// SettingsWebApply says "Apply"
+// in the language of msgs.
+func (msgs Messages) SettingsWebApply() string {
+	return Catalog.Format(msgs.locale, "settingsWebApply", nil)
+}
+
+// SettingsWebBadPort says "The port is a number from 1024 to 65535."
+// in the language the app shows.
+func SettingsWebBadPort() string { return In(i18n.Locale()).SettingsWebBadPort() }
+
+// SettingsWebBadPort says "The port is a number from 1024 to 65535."
+// in the language of msgs.
+func (msgs Messages) SettingsWebBadPort() string {
+	return Catalog.Format(msgs.locale, "settingsWebBadPort", nil)
+}
+
+// SettingsWebCopied says "Link copied"
+// in the language the app shows.
+func SettingsWebCopied() string { return In(i18n.Locale()).SettingsWebCopied() }
+
+// SettingsWebCopied says "Link copied"
+// in the language of msgs.
+func (msgs Messages) SettingsWebCopied() string {
+	return Catalog.Format(msgs.locale, "settingsWebCopied", nil)
+}
+
+// SettingsWebCopy says "Copy Link"
+// in the language the app shows.
+func SettingsWebCopy() string { return In(i18n.Locale()).SettingsWebCopy() }
+
+// SettingsWebCopy says "Copy Link"
+// in the language of msgs.
+func (msgs Messages) SettingsWebCopy() string {
+	return Catalog.Format(msgs.locale, "settingsWebCopy", nil)
+}
+
+// SettingsWebEnable says "Use ternssh in a browser"
+// in the language the app shows.
+func SettingsWebEnable() string { return In(i18n.Locale()).SettingsWebEnable() }
+
+// SettingsWebEnable says "Use ternssh in a browser"
+// in the language of msgs.
+func (msgs Messages) SettingsWebEnable() string {
+	return Catalog.Format(msgs.locale, "settingsWebEnable", nil)
+}
+
+// SettingsWebHint says "The app serves itself to browsers while it runs: the same tabs, servers, quick commands and terminals, in step with t…"
+// in the language the app shows.
+func SettingsWebHint() string { return In(i18n.Locale()).SettingsWebHint() }
+
+// SettingsWebHint says "The app serves itself to browsers while it runs: the same tabs, servers, quick commands and terminals, in step with t…"
+// in the language of msgs.
+func (msgs Messages) SettingsWebHint() string {
+	return Catalog.Format(msgs.locale, "settingsWebHint", nil)
+}
+
+// SettingsWebLANHint says "This machine and private addresses (the local network, VPNs) may connect. Browsers sign in with the username and pass…"
+// in the language the app shows.
+func SettingsWebLANHint() string { return In(i18n.Locale()).SettingsWebLANHint() }
+
+// SettingsWebLANHint says "This machine and private addresses (the local network, VPNs) may connect. Browsers sign in with the username and pass…"
+// in the language of msgs.
+func (msgs Messages) SettingsWebLANHint() string {
+	return Catalog.Format(msgs.locale, "settingsWebLANHint", nil)
+}
+
+// SettingsWebLinks says "Links"
+// in the language the app shows.
+func SettingsWebLinks() string { return In(i18n.Locale()).SettingsWebLinks() }
+
+// SettingsWebLinks says "Links"
+// in the language of msgs.
+func (msgs Messages) SettingsWebLinks() string {
+	return Catalog.Format(msgs.locale, "settingsWebLinks", nil)
+}
+
+// SettingsWebNeedAccount says "Access beyond this machine starts once a username and password are saved."
+// in the language the app shows.
+func SettingsWebNeedAccount() string { return In(i18n.Locale()).SettingsWebNeedAccount() }
+
+// SettingsWebNeedAccount says "Access beyond this machine starts once a username and password are saved."
+// in the language of msgs.
+func (msgs Messages) SettingsWebNeedAccount() string {
+	return Catalog.Format(msgs.locale, "settingsWebNeedAccount", nil)
+}
+
+// SettingsWebNeedUsername says "Enter a username."
+// in the language the app shows.
+func SettingsWebNeedUsername() string { return In(i18n.Locale()).SettingsWebNeedUsername() }
+
+// SettingsWebNeedUsername says "Enter a username."
+// in the language of msgs.
+func (msgs Messages) SettingsWebNeedUsername() string {
+	return Catalog.Format(msgs.locale, "settingsWebNeedUsername", nil)
+}
+
+// SettingsWebOpen says "Open"
+// in the language the app shows.
+//
+// Button that opens the web app's address in the browser.
+func SettingsWebOpen() string { return In(i18n.Locale()).SettingsWebOpen() }
+
+// SettingsWebOpen says "Open"
+// in the language of msgs.
+//
+// Button that opens the web app's address in the browser.
+func (msgs Messages) SettingsWebOpen() string {
+	return Catalog.Format(msgs.locale, "settingsWebOpen", nil)
+}
+
+// SettingsWebPasswordKeep says "Set: leave empty to keep it"
+// in the language the app shows.
+func SettingsWebPasswordKeep() string { return In(i18n.Locale()).SettingsWebPasswordKeep() }
+
+// SettingsWebPasswordKeep says "Set: leave empty to keep it"
+// in the language of msgs.
+func (msgs Messages) SettingsWebPasswordKeep() string {
+	return Catalog.Format(msgs.locale, "settingsWebPasswordKeep", nil)
+}
+
+// SettingsWebPasswordNew says "Password, at least {n} characters"
+// in the language the app shows.
+func SettingsWebPasswordNew(n string) string { return In(i18n.Locale()).SettingsWebPasswordNew(n) }
+
+// SettingsWebPasswordNew says "Password, at least {n} characters"
+// in the language of msgs.
+func (msgs Messages) SettingsWebPasswordNew(n string) string {
+	return Catalog.Format(msgs.locale, "settingsWebPasswordNew", map[string]any{"n": n})
+}
+
+// SettingsWebPort says "Port"
+// in the language the app shows.
+func SettingsWebPort() string { return In(i18n.Locale()).SettingsWebPort() }
+
+// SettingsWebPort says "Port"
+// in the language of msgs.
+func (msgs Messages) SettingsWebPort() string {
+	return Catalog.Format(msgs.locale, "settingsWebPort", nil)
+}
+
+// SettingsWebPublicHint says "Any address may connect, as through port forwarding. Browsers sign in with the username and password below; an addres…"
+// in the language the app shows.
+func SettingsWebPublicHint() string { return In(i18n.Locale()).SettingsWebPublicHint() }
+
+// SettingsWebPublicHint says "Any address may connect, as through port forwarding. Browsers sign in with the username and password below; an addres…"
+// in the language of msgs.
+func (msgs Messages) SettingsWebPublicHint() string {
+	return Catalog.Format(msgs.locale, "settingsWebPublicHint", nil)
+}
+
+// SettingsWebPublicLink says "From the internet: http://<public IP or domain>:{port}/"
+// in the language the app shows.
+func SettingsWebPublicLink(port string) string { return In(i18n.Locale()).SettingsWebPublicLink(port) }
+
+// SettingsWebPublicLink says "From the internet: http://<public IP or domain>:{port}/"
+// in the language of msgs.
+func (msgs Messages) SettingsWebPublicLink(port string) string {
+	return Catalog.Format(msgs.locale, "settingsWebPublicLink", map[string]any{"port": port})
+}
+
+// SettingsWebSaveAccount says "Save Account"
+// in the language the app shows.
+func SettingsWebSaveAccount() string { return In(i18n.Locale()).SettingsWebSaveAccount() }
+
+// SettingsWebSaveAccount says "Save Account"
+// in the language of msgs.
+func (msgs Messages) SettingsWebSaveAccount() string {
+	return Catalog.Format(msgs.locale, "settingsWebSaveAccount", nil)
+}
+
+// SettingsWebShortPassword says "The password needs at least {n} characters."
+// in the language the app shows.
+func SettingsWebShortPassword(n string) string { return In(i18n.Locale()).SettingsWebShortPassword(n) }
+
+// SettingsWebShortPassword says "The password needs at least {n} characters."
+// in the language of msgs.
+func (msgs Messages) SettingsWebShortPassword(n string) string {
+	return Catalog.Format(msgs.locale, "settingsWebShortPassword", map[string]any{"n": n})
+}
+
+// ShortcutCloseTab says "Close Terminal"
+// in the language the app shows.
+func ShortcutCloseTab() string { return In(i18n.Locale()).ShortcutCloseTab() }
+
+// ShortcutCloseTab says "Close Terminal"
+// in the language of msgs.
+func (msgs Messages) ShortcutCloseTab() string {
+	return Catalog.Format(msgs.locale, "shortcutCloseTab", nil)
+}
+
 // ShortcutErrTaken says "{shortcut} is already the shortcut of {name}"
 // in the language the app shows.
 func ShortcutErrTaken(shortcut string, name string) string {
@@ -2408,16 +2684,6 @@ func ShortcutFieldLabel(name string) string { return In(i18n.Locale()).ShortcutF
 // Terminal shortcut".
 func (msgs Messages) ShortcutFieldLabel(name string) string {
 	return Catalog.Format(msgs.locale, "shortcutFieldLabel", map[string]any{"name": name})
-}
-
-// ShortcutCloseTab says "Close Terminal"
-// in the language the app shows.
-func ShortcutCloseTab() string { return In(i18n.Locale()).ShortcutCloseTab() }
-
-// ShortcutCloseTab says "Close Terminal"
-// in the language of msgs.
-func (msgs Messages) ShortcutCloseTab() string {
-	return Catalog.Format(msgs.locale, "shortcutCloseTab", nil)
 }
 
 // ShortcutNewTerminal says "New Terminal"
@@ -3968,4 +4234,34 @@ func ViewViaSite(host string) string { return In(i18n.Locale()).ViewViaSite(host
 // in the language of msgs.
 func (msgs Messages) ViewViaSite(host string) string {
 	return Catalog.Format(msgs.locale, "viewViaSite", map[string]any{"host": host})
+}
+
+// WebListenFailed says "The web app could not start: {error}"
+// in the language the app shows.
+func WebListenFailed(error string) string { return In(i18n.Locale()).WebListenFailed(error) }
+
+// WebListenFailed says "The web app could not start: {error}"
+// in the language of msgs.
+func (msgs Messages) WebListenFailed(error string) string {
+	return Catalog.Format(msgs.locale, "webListenFailed", map[string]any{"error": error})
+}
+
+// WebNoTerminal says "This terminal was closed"
+// in the language the app shows.
+func WebNoTerminal() string { return In(i18n.Locale()).WebNoTerminal() }
+
+// WebNoTerminal says "This terminal was closed"
+// in the language of msgs.
+func (msgs Messages) WebNoTerminal() string {
+	return Catalog.Format(msgs.locale, "webNoTerminal", nil)
+}
+
+// WebOpenFailed says "What the browser opened is no longer there"
+// in the language the app shows.
+func WebOpenFailed() string { return In(i18n.Locale()).WebOpenFailed() }
+
+// WebOpenFailed says "What the browser opened is no longer there"
+// in the language of msgs.
+func (msgs Messages) WebOpenFailed() string {
+	return Catalog.Format(msgs.locale, "webOpenFailed", nil)
 }

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>ternssh</title>
+<link rel="icon" href="/assets/icon.png">
+<link rel="stylesheet" href="/assets/xterm.css">
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="top">
+  <button class="icon-btn menu" id="menu" aria-label="Menu"></button>
+  <div class="brand"><img class="logo" src="/assets/icon.png" alt="">ternssh</div>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="link" id="link" title=""></div>
+</header>
+<div class="body">
+  <aside class="side" id="side">
+    <div class="side-head">
+      <label class="search" id="searchBox"><input id="search" type="search" autocomplete="off" spellcheck="false"></label>
+      <button class="icon-btn" id="refresh" aria-label="Refresh"></button>
+    </div>
+    <div class="side-msg" id="sideMsg"></div>
+    <div class="tree" id="tree"></div>
+  </aside>
+  <main class="work">
+    <div class="sessions" id="sessions" role="tablist"></div>
+    <div class="empty" id="empty"></div>
+    <div class="screen" id="screen"><div id="term"></div></div>
+    <div class="cmds" id="cmds"></div>
+    <footer class="status" id="status"></footer>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="/assets/xterm.js"></script>
+<script src="/assets/app.js"></script>
+</body>
+</html>

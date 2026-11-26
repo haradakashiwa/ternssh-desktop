@@ -15,6 +15,7 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 
+	"ternssh-desktop/internal/shell"
 	"ternssh-desktop/internal/sshconn"
 	"ternssh-desktop/internal/store"
 	"ternssh-desktop/internal/ternssh"
@@ -51,8 +52,10 @@ type Backend struct {
 	// the program in it does.
 	NewTerminal func(conn Conn, ev TermEvents) (*terminal.Terminal, error)
 	// NewShell makes a terminal of a shell of this machine, started in
-	// dir, which tells ev what the program in it does, and when it ends.
-	NewShell func(dir string, ev TermEvents) (*terminal.Terminal, error)
+	// dir, which tells ev what the program in it does, and when it ends:
+	// conn is the shell's (shell.Shell), and zsh tells its prompts are
+	// marked for the terminal's shell integration.
+	NewShell func(conn Conn, zsh bool, ev TermEvents) (*terminal.Terminal, error)
 	// Notify shows a desktop notification, which runs onClick when
 	// clicked; nil shows none.
 	Notify func(title, body string, onClick func())
@@ -83,6 +86,8 @@ type Backend struct {
 	// SetLanguage makes the app show the language of tag, as "en", or
 	// the system's for "".
 	SetLanguage func(tag string)
+	// OpenURL opens a web address in the browser; nil for none.
+	OpenURL func(url string) error
 	// AccessLogin opens a window where the user signs in to the
 	// Cloudflare Access of the site at siteURL, and returns the token of
 	// the sign-in once they did, or an error when they closed the window.
@@ -148,6 +153,9 @@ type Model struct {
 
 	toast     string
 	toastTime time.Time
+
+	web  WebServer // shows the window in browsers; nil for none
+	taps taps      // the sessions' terminals, for the web
 }
 
 // siteState is a tab: a site, or this machine (home) when its site has
@@ -194,6 +202,7 @@ type session struct {
 	node     ternssh.Node // the server, when Synced
 	localID  string       // the server when Local, the terminal when Shell
 	conn     Conn
+	tap      *tap // conn as the terminal reads it, passing it on to the web
 	term     *terminal.Terminal
 	status   sshconn.Status
 	err      string
@@ -262,6 +271,9 @@ func (m *Model) newClient(site store.Site, secret string) (*ternssh.Client, erro
 // Start loads the servers of the tab shown.
 func (m *Model) Start() {
 	m.startHotkey()
+	if err := m.applyWeb(); err != nil {
+		m.notify(locales.WebListenFailed(err.Error()))
+	}
 	if s := m.current(); s != nil {
 		m.refresh(s)
 	}
@@ -276,7 +288,12 @@ func (m *Model) current() *siteState {
 
 func (m *Model) update(fn func()) {
 	if m.backend.Update != nil {
-		m.backend.Update(fn)
+		m.backend.Update(func() {
+			fn()
+			// The window builds its view again, which publishes too, but
+			// not while it is hidden.
+			m.publish()
+		})
 	} else {
 		fn()
 	}
@@ -471,13 +488,16 @@ func (m *Model) open(s *siteState, sess *session, dial func(sshconn.Events) Conn
 		OnDir: func(path string) { m.update(func() { sess.dir = path }) },
 	})
 	if m.backend.NewTerminal != nil {
-		term, err := m.backend.NewTerminal(sess.conn, m.termEvents(s, sess))
+		sess.tap = newTap(sess.conn)
+		term, err := m.backend.NewTerminal(sess.tap, m.termEvents(s, sess))
 		if err != nil {
 			sess.conn.Close()
 			m.notify(locales.ModelTerminalCreateFailed(err.Error()))
 			return
 		}
 		sess.term = term
+		sess.tap.setTerminal(term)
+		m.taps.put(sess.id, sess.tap)
 	}
 	s.sessions = append(s.sessions, sess)
 	s.current = len(s.sessions) - 1
@@ -499,12 +519,26 @@ func (m *Model) openShell(s *siteState, t store.Terminal) {
 	if m.backend.NewShell != nil {
 		ev := m.termEvents(s, sess)
 		ev.OnExit = func(int) { m.update(func() { sess.status = sshconn.StatusClosed }) }
-		term, err := m.backend.NewShell(expandHome(t.Dir), ev)
+		sh, err := shell.Start(expandHome(t.Dir))
 		if err != nil {
 			m.notify(locales.ModelTerminalOpenFailed(err.Error()))
 			return
 		}
+		ev.OnClear = func() {
+			// Windows' console clears its screen too, once the terminal did.
+			time.AfterFunc(20*time.Millisecond, sh.ClearScreen)
+			sess.tap.resyncSoon()
+		}
+		sess.conn, sess.tap = sh, newTap(sh)
+		term, err := m.backend.NewShell(sess.tap, sh.Zsh(), ev)
+		if err != nil {
+			sh.Close()
+			m.notify(locales.ModelTerminalOpenFailed(err.Error()))
+			return
+		}
 		sess.term = term
+		sess.tap.setTerminal(term)
+		m.taps.put(sess.id, sess.tap)
 	}
 	s.sessions = append(s.sessions, sess)
 	s.current = len(s.sessions) - 1
@@ -618,6 +652,7 @@ func (m *Model) closeSession(s *siteState, i int) {
 	}
 	sess := s.sessions[i]
 	closePanels(sess)
+	m.taps.remove(sess.id)
 	if sess.term != nil {
 		sess.term.Close()
 	} else if sess.conn != nil {

@@ -12,6 +12,10 @@ const T = {
     online: "Connected to the app", shownInApp: "shown in the app", notReady: "The terminal is not connected",
     sent: "Sent: ",
     keysCtrl: "Ctrl: applies to the next key. Tap twice to keep it on.", keysAlt: "Alt: applies to the next key. Tap twice to keep it on.",
+    pick: "Paste files or images into the terminal (or paste or drop them on it)",
+    uploading: "Pasting into the terminal", uploadingOf: "{i} of {n}", cancel: "Cancel",
+    tooLarge: "{name} is larger than {max}, the most a paste takes", uploadFailed: "Could not paste: ",
+    pasted: "Pasted {n} into the terminal", pastedOne: "Pasted {name} into the terminal",
   },
   zh: {
     search: "搜索", refresh: "刷新", loading: "正在加载…", noItems: "这里还没有内容",
@@ -20,10 +24,14 @@ const T = {
     online: "已连接到应用", shownInApp: "应用中正在显示", notReady: "终端未连接",
     sent: "已发送：",
     keysCtrl: "Ctrl：作用于下一个按键，连按两次保持按下", keysAlt: "Alt：作用于下一个按键，连按两次保持按下",
+    pick: "把文件或图片粘贴到终端（也可直接粘贴或拖到终端上）",
+    uploading: "正在粘贴到终端", uploadingOf: "第 {i} 个，共 {n} 个", cancel: "取消",
+    tooLarge: "{name} 超过 {max}，无法粘贴", uploadFailed: "粘贴失败：",
+    pasted: "已将 {n} 个文件粘贴到终端", pastedOne: "已将 {name} 粘贴到终端",
   },
 };
 let lang = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
-const t = (k) => T[lang][k];
+const t = (k, args) => T[lang][k].replace(/\{(\w+)\}/g, (_, a) => (args && a in args ? args[a] : ""));
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -135,6 +143,7 @@ addEventListener("resize", fit);
 // until tapped again.
 const mods = { ctrl: 0, alt: 0 }; // 0 off, 1 the next key, 2 locked
 const KEYS = [
+  { label: "📎", pick: true },
   { label: "Esc", seq: "\x1b" },
   { label: "Tab", seq: "\t" },
   { label: "Ctrl", mod: "ctrl" },
@@ -194,6 +203,8 @@ function paintKeys() {
     b.classList.toggle("lock", v === 2);
     b.title = t(b.dataset.mod === "ctrl" ? "keysCtrl" : "keysAlt");
   }
+  const pick = $("keys").querySelector("[data-pick]");
+  if (pick) pick.title = t("pick");
 }
 
 {
@@ -207,6 +218,13 @@ function paintKeys() {
     const b = el("button", "key", k.label);
     b.tabIndex = -1;
     if (k.mod) b.dataset.mod = k.mod;
+    if (k.pick) {
+      b.classList.add("pick");
+      b.dataset.pick = "1";
+      b.addEventListener("click", () => $("pick").click());
+      bar.append(b);
+      continue;
+    }
     const press = () => {
       if (k.mod) {
         mods[k.mod] = (mods[k.mod] + 1) % 3;
@@ -336,7 +354,9 @@ function connect() {
   };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.type === "state") {
+    if (m.type === "hello") {
+      if (m.maxUpload) maxUpload = m.maxUpload;
+    } else if (m.type === "state") {
       state = m.state;
       render();
     } else if (m.type === "term") {
@@ -567,6 +587,166 @@ function renderStatus(sess) {
     };
     bar.append(b);
   }
+}
+
+// --- Pasting files and images
+//
+// What the browser pastes or drops on the terminal that holds files or
+// images (and the 📎 key picks) goes to the app, one file after the other,
+// while the page waits, showing how far it got; then the terminal pastes
+// them as the window pastes the clipboard: an image as the image, for a
+// program that reads it (as a coding agent), a file as a file.
+
+let maxUpload = 100 * 1024 * 1024;
+let uploading = null; // { xhr, cancelled } while files go up
+
+function fmtSize(n) {
+  const u = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return (i && n < 10 ? n.toFixed(1) : Math.round(n)) + " " + u[i];
+}
+
+function currentSession() {
+  if (!state || !watching) return null;
+  for (const tab of state.tabs) for (const s of tab.sessions || []) if (s.id === watching) return s;
+  return null;
+}
+
+// sendFile posts a file to the app, telling progress the bytes it sent,
+// and resolves to its upload name. Signed out, as the session cookie
+// lapsed, it signs in again and sends it once more.
+function sendFile(f, progress, again = true) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    uploading.xhr = xhr;
+    xhr.open("POST", `/upload?name=${encodeURIComponent(f.name || "pasted")}&type=${encodeURIComponent(f.type || "")}`);
+    xhr.upload.onprogress = (e) => progress(e.loaded);
+    xhr.onload = () => {
+      if (xhr.status === 200) return resolve(JSON.parse(xhr.responseText).id);
+      if (xhr.status === 401 && again) {
+        return fetch("/", { method: "HEAD", cache: "no-store" }).catch(() => {})
+          .then(() => sendFile(f, progress, false)).then(resolve, reject);
+      }
+      if (xhr.status === 413) return reject(new Error(t("tooLarge", { name: f.name, max: fmtSize(maxUpload) })));
+      reject(new Error((xhr.responseText || xhr.statusText || String(xhr.status)).trim()));
+    };
+    xhr.onerror = () => reject(new Error(t("offline")));
+    xhr.onabort = () => reject(new Error(t("cancel")));
+    xhr.send(f);
+  });
+}
+
+function showUpload(on) {
+  $("uploading").hidden = !on;
+  term.options.disableStdin = on;
+  if (on) {
+    term.blur();
+    $("upCancel").textContent = t("cancel");
+    $("upCancel").focus();
+  }
+}
+
+async function pasteFiles(list) {
+  if (uploading) return;
+  const sess = currentSession();
+  if (!sess || sess.status !== "ready" || !ws || ws.readyState !== WebSocket.OPEN) return toast(t("notReady"));
+  let files = [...list];
+  const big = files.find((f) => f.size > maxUpload);
+  if (big) toast(t("tooLarge", { name: big.name || "", max: fmtSize(maxUpload) }));
+  files = files.filter((f) => f.size <= maxUpload);
+  if (!files.length) return;
+
+  const id = sess.id;
+  const total = files.reduce((n, f) => n + f.size, 0);
+  const started = performance.now();
+  let before = 0;
+  const paint = (sent) => {
+    const done = before + sent;
+    const pct = total ? Math.min(100, (done / total) * 100) : 100;
+    $("upBar").style.width = pct.toFixed(1) + "%";
+    const secs = (performance.now() - started) / 1000;
+    const rate = secs > 0.3 ? ` · ${fmtSize(done / secs)}/s` : "";
+    $("upInfo").textContent = `${fmtSize(done)} / ${fmtSize(total)} · ${Math.floor(pct)}%${rate}`;
+  };
+  uploading = { xhr: null, cancelled: false };
+  $("upTitle").textContent = t("uploading");
+  showUpload(true);
+  const ids = [];
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      $("upName").textContent = (files.length > 1 ? t("uploadingOf", { i: i + 1, n: files.length }) + " · " : "") + (f.name || f.type);
+      paint(0);
+      ids.push(await sendFile(f, paint));
+      before += f.size;
+    }
+    paint(0);
+    send({ type: "paste", id, uploads: ids });
+    toast(files.length > 1 ? t("pasted", { n: files.length }) : t("pastedOne", { name: files[0].name || files[0].type }));
+  } catch (e) {
+    if (!uploading.cancelled) toast(t("uploadFailed") + e.message);
+  } finally {
+    uploading = null;
+    showUpload(false);
+    term.focus();
+  }
+}
+
+function cancelUpload() {
+  if (!uploading) return;
+  uploading.cancelled = true;
+  if (uploading.xhr) uploading.xhr.abort();
+}
+
+// filesOf are the files a paste or drop holds, none for text.
+function filesOf(dt) {
+  if (!dt) return [];
+  if (dt.files && dt.files.length) return [...dt.files];
+  return [...(dt.items || [])].filter((i) => i.kind === "file").map((i) => i.getAsFile()).filter(Boolean);
+}
+
+{
+  const screen = $("screen");
+  // Before the terminal's own paste, which takes text only.
+  screen.addEventListener("paste", (e) => {
+    if (uploading) return e.preventDefault();
+    const files = filesOf(e.clipboardData);
+    if (!files.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    pasteFiles(files);
+  }, true);
+  const dragging = (e) => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
+  screen.addEventListener("dragover", (e) => {
+    if (!dragging(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    screen.classList.add("drop");
+  });
+  screen.addEventListener("dragleave", (e) => {
+    if (!screen.contains(e.relatedTarget)) screen.classList.remove("drop");
+  });
+  screen.addEventListener("drop", (e) => {
+    screen.classList.remove("drop");
+    if (!dragging(e)) return;
+    e.preventDefault();
+    pasteFiles(filesOf(e.dataTransfer));
+  });
+  // A drop elsewhere does not open the file in place of the page.
+  addEventListener("dragover", (e) => e.preventDefault());
+  addEventListener("drop", (e) => e.preventDefault());
+  $("pick").addEventListener("change", (e) => {
+    const files = [...e.target.files];
+    e.target.value = "";
+    if (files.length) pasteFiles(files);
+  });
+  $("upCancel").onclick = cancelUpload;
+  addEventListener("keydown", (e) => {
+    if (!uploading || e.target === $("upCancel") && (e.key === "Enter" || e.key === " ")) return;
+    e.preventDefault();
+    if (e.key === "Escape") cancelUpload();
+  }, true);
 }
 
 $("search").addEventListener("input", (e) => {

@@ -5,6 +5,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +22,7 @@ type fakeApp struct {
 	mu     sync.Mutex
 	acts   []string
 	inputs []string
+	pasted []string
 	frames chan Frame
 }
 
@@ -34,6 +38,15 @@ func (a *fakeApp) Input(id string, data []byte) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.inputs = append(a.inputs, id+":"+string(data))
+}
+
+func (a *fakeApp) Paste(id string, items []Pasted) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, p := range items {
+		b, _ := os.ReadFile(p.Path)
+		a.pasted = append(a.pasted, id+":"+filepath.Base(p.Path)+":"+p.Type+":"+string(b))
+	}
 }
 
 type fakeStream struct{ ch chan Frame }
@@ -144,8 +157,11 @@ func TestWebSocket(t *testing.T) {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	s.Publish([]byte(`{"tabs":[]}`))
 	var m message
+	if err := websocket.JSON.Receive(ws, &m); err != nil || m.Type != "hello" || m.MaxUpload != MaxUpload {
+		t.Fatalf("hello: %+v %v", m, err)
+	}
+	s.Publish([]byte(`{"tabs":[]}`))
 	if err := websocket.JSON.Receive(ws, &m); err != nil || m.Type != "state" || string(m.State) != `{"tabs":[]}` {
 		t.Fatalf("state: %+v %v", m, err)
 	}
@@ -316,5 +332,95 @@ func TestSignInOnce(t *testing.T) {
 	s.sessions.clear()
 	if res := withCookie("/"); res.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("a forgotten session: %d", res.StatusCode)
+	}
+}
+
+func post(t *testing.T, base, origin, name, typ, body string) (*http.Response, string) {
+	t.Helper()
+	req, _ := http.NewRequest("POST", base+"/upload?name="+url.QueryEscape(name)+"&type="+url.QueryEscape(typ), strings.NewReader(body))
+	req.Header.Set("Origin", origin)
+	req.SetBasicAuth("me", "correct horse")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var out struct{ ID string }
+	json.NewDecoder(res.Body).Decode(&out)
+	return res, out.ID
+}
+
+func TestUploadAndPaste(t *testing.T) {
+	s, app, base := start(t, LAN)
+	s.uploads.root = t.TempDir()
+	if res, _ := post(t, base, "http://evil.example", "a.txt", "text/plain", "x"); res.StatusCode != http.StatusForbidden {
+		t.Fatalf("another site's page uploaded: %d", res.StatusCode)
+	}
+	res, img := post(t, base, base, "image.png", "image/png", "PNG")
+	if res.StatusCode != http.StatusOK || img == "" {
+		t.Fatalf("image: %d", res.StatusCode)
+	}
+	_, file := post(t, base, base, "../../etc/notes.txt", "bogus", "hello")
+	if file == "" {
+		t.Fatal("file not kept")
+	}
+	ws, err := dial(t, base, base, "me", "correct horse")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ws.Close()
+	websocket.JSON.Send(ws, message{Type: "paste", ID: "s1", Uploads: []string{img, file, "unknown"}})
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		app.mu.Lock()
+		got := strings.Join(app.pasted, ",")
+		app.mu.Unlock()
+		if got != "" {
+			if got != "s1:image.png:image/png:PNG,s1:notes.txt::hello" {
+				t.Fatalf("pasted %q", got)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("nothing pasted")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	// The image was read and is gone; the file stays for its path; and
+	// neither pastes twice.
+	time.Sleep(50 * time.Millisecond)
+	entries, _ := os.ReadDir(s.uploads.root)
+	if len(entries) != 1 {
+		t.Fatalf("kept %d uploads, want the file's", len(entries))
+	}
+	if left := s.uploads.take([]string{img, file}); len(left) != 0 {
+		t.Fatalf("pasted again: %+v", left)
+	}
+}
+
+func TestUploadTooLarge(t *testing.T) {
+	s, _, base := start(t, LAN)
+	s.uploads.root = t.TempDir()
+	req, _ := http.NewRequest("POST", base+"/upload?name=big", strings.NewReader("x"))
+	req.ContentLength = MaxUpload + 1
+	req.Header.Set("Origin", base)
+	req.SetBasicAuth("me", "correct horse")
+	res, err := http.DefaultClient.Do(req)
+	if err == nil {
+		res.Body.Close()
+		if res.StatusCode != http.StatusRequestEntityTooLarge {
+			t.Fatalf("status %d", res.StatusCode)
+		}
+	}
+}
+
+func TestCleanName(t *testing.T) {
+	for in, want := range map[string]string{
+		"shot.png": "shot.png", `C:\x\a.txt`: "a.txt", "../..": "pasted", "": "pasted", "a\x00b": "a_b",
+		strings.Repeat("长", 60) + ".png": strings.Repeat("长", 38) + ".png",
+	} {
+		if got := cleanName(in); got != want {
+			t.Errorf("cleanName(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

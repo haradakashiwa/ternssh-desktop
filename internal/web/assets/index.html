@@ -35,6 +35,15 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
+<div class="uploading" id="uploading" hidden>
+  <div class="up-card" role="dialog" aria-modal="true" aria-labelledby="upTitle">
+    <div class="up-head"><span class="spin"></span><b id="upTitle"></b></div>
+    <div class="up-name" id="upName"></div>
+    <div class="up-bar"><i id="upBar"></i></div>
+    <div class="up-foot"><span id="upInfo"></span><button id="upCancel"></button></div>
+  </div>
+</div>
+<input type="file" id="pick" multiple hidden>
 <script src="/assets/xterm.js"></script>
 <script src="/assets/app.js"></script>
 </body>

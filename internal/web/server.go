@@ -62,6 +62,16 @@ type App interface {
 	Attach(session string) (Stream, error)
 	// Input types data into the terminal of a session.
 	Input(session string, data []byte)
+	// Paste pastes into the terminal of a session what a browser pasted
+	// or dropped on it, as the window pastes the clipboard. It reads the
+	// files before it returns; images are removed after.
+	Paste(session string, items []Pasted)
+}
+
+// Pasted is a file a browser pasted, kept on this machine.
+type Pasted struct {
+	Path string // its file, under its own name
+	Type string // its MIME type, as image/png; "" when the browser gave none
 }
 
 // Who the server lets in (Options.Access).
@@ -100,6 +110,7 @@ type Server struct {
 	// WebSocket in, which some browsers (Safari) open without the page's
 	// username and password, asking for them a second time.
 	sessions sessions
+	uploads  uploads
 }
 
 // New returns a server of app, which Apply starts.
@@ -152,6 +163,7 @@ func (s *Server) Apply(opts *Options) error {
 		w.Write(b)
 	})
 	mux.Handle("GET /ws", websocket.Server{Handshake: sameOrigin, Handler: s.serveWS})
+	mux.HandleFunc("POST /upload", s.serveUpload)
 	s.ln = ln
 	s.srv = &http.Server{Handler: s.auth(*opts, mux), ReadHeaderTimeout: 10 * time.Second}
 	go func(srv *http.Server) {
@@ -333,7 +345,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, o Options) bool 
 	}
 	// The WebSocket's 401 asks nothing: the page signs in again with
 	// the username and password the browser keeps, then opens it.
-	if r.URL.Path != "/ws" {
+	if r.URL.Path != "/ws" && r.URL.Path != "/upload" {
 		w.Header().Set("WWW-Authenticate", `Basic realm="ternssh", charset="UTF-8"`)
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -491,6 +503,10 @@ type message struct {
 	Text  string `json:"text,omitempty"` // typed
 	// action
 	Action json.RawMessage `json:"action,omitempty"`
+	// hello: the largest file a paste takes
+	MaxUpload int64 `json:"maxUpload,omitempty"`
+	// paste: the uploads to paste into the terminal ID, as /upload named them
+	Uploads []string `json:"uploads,omitempty"`
 }
 
 // client is a browser's WebSocket.
@@ -546,6 +562,7 @@ func (s *Server) serveWS(ws *websocket.Conn) {
 		delete(s.clients, c)
 		s.mu.Unlock()
 	}()
+	c.send(message{Type: "hello", MaxUpload: MaxUpload})
 	if state != nil {
 		c.send(message{Type: "state", State: state})
 	}
@@ -591,6 +608,11 @@ func (s *Server) serveWS(ws *websocket.Conn) {
 			}
 			if m.ID != "" && len(data) > 0 {
 				s.app.Input(m.ID, data)
+			}
+		case "paste":
+			if items := s.uploads.take(m.Uploads); m.ID != "" && len(items) > 0 {
+				s.app.Paste(m.ID, items)
+				s.uploads.done(items)
 			}
 		case "action":
 			if len(m.Action) > 0 {
